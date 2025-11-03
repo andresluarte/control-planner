@@ -148,15 +148,20 @@
     {% block js %}{% endblock %}
 
 <script>
-const vapidKey = "{{ WEBPUSH_PUBLIC_KEY }}";  // o usa webpush_settings
+    // Usar exactamente el nombre que envías desde views.py
+    const vapidKey = "{{ VAPID_PUBLIC_KEY }}";  
 </script>
 
 <script>
-
 if ('serviceWorker' in navigator && 'PushManager' in window) {
     navigator.serviceWorker.register("{% static 'serviceworker.js' %}")
         .then(function(registration) {
             console.log('ServiceWorker registrado:', registration);
+
+            if (!vapidKey) {
+                console.error('VAPID_PUBLIC_KEY no está definida');
+                return;
+            }
 
             registration.pushManager.getSubscription().then(function(subscription) {
                 if (subscription) {
@@ -164,11 +169,7 @@ if ('serviceWorker' in navigator && 'PushManager' in window) {
                     return subscription;
                 }
 
-                if (!"{{ WEBPUSH_PUBLIC_KEY }}") {
-                    console.error('VAPID_PUBLIC_KEY no está definida');
-                    return;
-                }
-
+                // Suscribirse al Push Service
                 return registration.pushManager.subscribe({
                     userVisibleOnly: true,
                     applicationServerKey: urlBase64ToUint8Array(vapidKey)
@@ -178,6 +179,7 @@ if ('serviceWorker' in navigator && 'PushManager' in window) {
 
                 console.log('Suscripción exitosa:', newSubscription);
 
+                // Guardar suscripción en el backend
                 fetch("{% url 'suscribir_notificaciones' %}", {
                     method: 'POST',
                     headers: {
@@ -186,7 +188,7 @@ if ('serviceWorker' in navigator && 'PushManager' in window) {
                     },
                     body: JSON.stringify(newSubscription)
                 }).then(resp => resp.json())
-                  .then(data => console.log(data))
+                  .then(data => console.log('Respuesta backend:', data))
                   .catch(err => console.error('Error guardando suscripción:', err));
             }).catch(function(err) {
                 console.error('Error en suscripción:', err);
