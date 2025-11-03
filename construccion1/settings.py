@@ -76,6 +76,7 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
                 'construccion1app.context_processors.notificaciones_context',
                 'construccion1app.context_processors.webpush_settings',
+                'construccion1app.context_processors.webpush_vapid',
             ],
         },
     },

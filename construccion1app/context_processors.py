@@ -13,3 +13,9 @@ def webpush_settings(request):
     return {
         'WEBPUSH_SETTINGS': settings.WEBPUSH_SETTINGS
     }
+from django.conf import settings
+
+def webpush_vapid(request):
+    return {
+        'VAPID_PUBLIC_KEY': settings.WEBPUSH_SETTINGS['VAPID_PUBLIC_KEY']
+    }
