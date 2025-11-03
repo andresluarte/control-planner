@@ -988,6 +988,29 @@ def exportar_actividades_excel(request, proyecto_id):
     return response
 
 
+from django.contrib.auth.decorators import login_required
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
+from webpush.models import PushInformation
+
+# views.py
+import json
+
+@login_required
+@require_POST
+def suscribir_notificaciones(request):
+    """
+    Guarda la suscripción del usuario en la base de datos
+    """
+    try:
+        subscription_data = json.loads(request.body)
+        PushInformation.objects.update_or_create(
+            user=request.user,
+            defaults={'subscription_info': subscription_data}
+        )
+        return JsonResponse({"message": "Suscripción exitosa"})
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=400)
 
 
 # views.py
