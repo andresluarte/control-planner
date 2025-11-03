@@ -171,7 +171,7 @@ if ('serviceWorker' in navigator && 'PushManager' in window) {
 
                 return registration.pushManager.subscribe({
                     userVisibleOnly: true,
-                    applicationServerKey: urlBase64ToUint8Array("{{ VAPID_PUBLIC_KEY }}")
+                    applicationServerKey: urlBase64ToUint8Array(vapidKey)
                 });
             }).then(function(newSubscription) {
                 if (!newSubscription) return;

@@ -32,11 +32,5 @@ urlpatterns = [
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
-urlpatterns += [
-    re_path(r'^serviceworker.js$', serve, {
-        'path': os.path.join(settings.BASE_DIR, 'serviceworker.js'),
-        'document_root': settings.BASE_DIR,
-    }),
-]
 
 
