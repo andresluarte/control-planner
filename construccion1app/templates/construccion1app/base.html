@@ -150,28 +150,47 @@
 
 <script>
 if ('serviceWorker' in navigator && 'PushManager' in window) {
-    navigator.serviceWorker.ready.then(function(registration) {
-        registration.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: urlBase64ToUint8Array("{{ VAPID_PUBLIC_KEY }}")
-        }).then(function(subscription) {
-            console.log('Suscripción exitosa:', subscription);
+    navigator.serviceWorker.register("{% static 'serviceworker.js' %}")
+        .then(function(registration) {
+            console.log('ServiceWorker registrado:', registration);
 
-            fetch("{% url 'suscribir_notificaciones' %}", {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': '{{ csrf_token }}'
-                },
-                body: JSON.stringify(subscription)
+            registration.pushManager.getSubscription().then(function(subscription) {
+                if (subscription) {
+                    console.log('Ya existe suscripción:', subscription);
+                    return subscription;
+                }
+
+                if (!"{{ VAPID_PUBLIC_KEY }}") {
+                    console.error('VAPID_PUBLIC_KEY no está definida');
+                    return;
+                }
+
+                return registration.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: urlBase64ToUint8Array("{{ VAPID_PUBLIC_KEY }}")
+                });
+            }).then(function(newSubscription) {
+                if (!newSubscription) return;
+
+                console.log('Suscripción exitosa:', newSubscription);
+
+                fetch("{% url 'suscribir_notificaciones' %}", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    },
+                    body: JSON.stringify(newSubscription)
+                }).then(resp => resp.json())
+                  .then(data => console.log(data))
+                  .catch(err => console.error('Error guardando suscripción:', err));
+            }).catch(function(err) {
+                console.error('Error en suscripción:', err);
             });
-        }).catch(function(err) {
-            console.error('Error en suscripción:', err);
         });
-    });
 }
 
-// Función de helper para convertir VAPID key
+// Helper para convertir VAPID key
 function urlBase64ToUint8Array(base64String) {
     const padding = '='.repeat((4 - base64String.length % 4) % 4);
     const base64 = (base64String + padding)
@@ -181,7 +200,6 @@ function urlBase64ToUint8Array(base64String) {
     return new Uint8Array([...rawData].map(char => char.charCodeAt(0)));
 }
 </script>
-
 
 
 </body>

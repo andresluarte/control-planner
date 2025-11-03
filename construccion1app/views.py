@@ -993,8 +993,37 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from webpush.models import PushInformation
 
+# views.py
+import json
+
 @login_required
 @require_POST
 def suscribir_notificaciones(request):
-    """Vista para manejar la suscripción del usuario"""
-    return JsonResponse({"message": "Suscripción exitosa"})
+    """
+    Guarda la suscripción del usuario en la base de datos
+    """
+    try:
+        subscription_data = json.loads(request.body)
+        PushInformation.objects.update_or_create(
+            user=request.user,
+            defaults={'subscription_info': subscription_data}
+        )
+        return JsonResponse({"message": "Suscripción exitosa"})
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=400)
+
+
+# views.py
+from django.shortcuts import render
+from django.conf import settings
+from django.contrib.auth.decorators import login_required
+
+@login_required
+def base_view(request):
+    """
+    Renderiza la base y pasa la clave VAPID al template
+    """
+    context = {
+        'VAPID_PUBLIC_KEY': settings.WEBPUSH_SETTINGS['VAPID_PUBLIC_KEY']
+    }
+    return render(request, 'construccion1app/base.html', context)
