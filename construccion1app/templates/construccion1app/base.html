@@ -149,7 +149,8 @@
 
 <script>
     // Usar exactamente el nombre que envías desde views.py
-    const vapidKey = "{{ VAPID_PUBLIC_KEY }}";  
+    const vapidKey = "{{ VAPID_PUBLIC_KEY|safe }}";
+
 </script>
 
 <script>
