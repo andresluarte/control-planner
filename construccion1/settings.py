@@ -5,7 +5,7 @@ Django settings for construccion1 project.
 from pathlib import Path
 import os 
 import dj_database_url
-
+DEBUG = True
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -124,6 +124,12 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 LANGUAGE_CODE = 'es-es'
 USE_I18N = True
+
+
+CSRF_TRUSTED_ORIGINS = [
+    'https://control-plannner-4c7ab22173ea.herokuapp.com',
+    'https://*.herokuapp.com',
+]
 
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = '/static/'
