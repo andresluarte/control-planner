@@ -147,8 +147,12 @@
 
     {% block js %}{% endblock %}
 
+<script>
+const vapidKey = "{{ WEBPUSH_PUBLIC_KEY }}";  // o usa webpush_settings
+</script>
 
 <script>
+
 if ('serviceWorker' in navigator && 'PushManager' in window) {
     navigator.serviceWorker.register("{% static 'serviceworker.js' %}")
         .then(function(registration) {
