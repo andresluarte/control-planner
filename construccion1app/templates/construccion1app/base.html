@@ -164,7 +164,7 @@ if ('serviceWorker' in navigator && 'PushManager' in window) {
                     return subscription;
                 }
 
-                if (!"{{ VAPID_PUBLIC_KEY }}") {
+                if (!"{{ WEBPUSH_PUBLIC_KEY }}") {
                     console.error('VAPID_PUBLIC_KEY no está definida');
                     return;
                 }
