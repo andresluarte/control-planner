@@ -113,23 +113,33 @@ WSGI_APPLICATION = 'construccion1.wsgi.application'
 #   }
 #}
 
+
+
+# Configuración de base de datos
+DATABASES = {
+    'default': dj_database_url.config(
+        default='postgresql://u8pergpsrneqj9:p7a766b1364f8ec48ad7cf5f1d3e5064d577cd112c1251f3c5aeeaedded59d3b3@cee3ebbhveeob.cluster-czrs8kj4isg7.us-east-1.rds.amazonaws.com:5432/d7geplabfju1gr',
+        conn_max_age=600
+    )
+}
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'd7geplabfju1gr',
-        'USER': 'u8pergpsrneqj9',
-        'PASSWORD': 'p7a766b1364f8ec48ad7cf5f1d3e5064d577cd112c1251f3c5aeeaedded59d3b3',
-        'HOST': 'cee3ebbhveeob.cluster-czrs8kj4isg7.us-east-1.rds.amazonaws.com',
-        'PORT': '5432',
-    }
-}
+#DATABASES = {
+#   'default': {
+#        'ENGINE': 'django.db.backends.postgresql',
+#       'NAME': 'd7geplabfju1gr',
+#        'USER': 'u8pergpsrneqj9',
+#        'PASSWORD': 'p7a766b1364f8ec48ad7cf5f1d3e5064d577cd112c1251f3c5aeeaedded59d3b3',
+#        'HOST': 'cee3ebbhveeob.cluster-czrs8kj4isg7.us-east-1.rds.amazonaws.com',
+#       'PORT': '5432',
+#    }
+#}
 
 AUTH_USER_MODEL = 'construccion1app.Usuario'
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
 CRISPY_TEMPLATE_PACK = "bootstrap5"
-
+ALLOWED_HOSTS = ['.herokuapp.com', 'localhost', '127.0.0.1']
+MIDDLEWARE.insert(1, 'whitenoise.middleware.WhiteNoiseMiddleware')
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
 
