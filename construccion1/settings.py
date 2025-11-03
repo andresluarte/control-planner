@@ -102,13 +102,26 @@ WSGI_APPLICATION = 'construccion1.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
+#DATABASES = {
+#    'default': {
+#        'ENGINE': 'django.db.backends.postgresql',
+#        'NAME': 'construccion1bd',
+#        'USER': 'postgres',
+#        'PASSWORD': 'postgres',
+#        'HOST': 'localhost',
+#        'PORT': '5432',
+#   }
+#}
+
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'construccion1bd',
-        'USER': 'postgres',
-        'PASSWORD': 'postgres',
-        'HOST': 'localhost',
+        'NAME': 'd7geplabfju1gr',
+        'USER': 'u8pergpsrneqj9',
+        'PASSWORD': 'p7a766b1364f8ec48ad7cf5f1d3e5064d577cd112c1251f3c5aeeaedded59d3b3',
+        'HOST': 'cee3ebbhveeob.cluster-czrs8kj4isg7.us-east-1.rds.amazonaws.com',
         'PORT': '5432',
     }
 }
@@ -139,34 +152,31 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
-
-TIME_ZONE = 'UTC'
-
-USE_I18N = True
-
-USE_TZ = True
-import os
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
-
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/5.2/howto/static-files/
-
-STATIC_URL = 'static/'
-
-# Default primary key field type
-# https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
-
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-import os
+# === Rutas base del proyecto ===
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+# === Idioma y zona horaria ===
+LANGUAGE_CODE = 'en-us'
+TIME_ZONE = 'UTC'
+USE_I18N = True
+USE_TZ = True
+
+# === Archivos estáticos (CSS, JS, imágenes) ===
+STATIC_URL = '/static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')  # 📁 carpeta donde Django recopila los estáticos para producción
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, 'static')  # 📂 carpeta donde guardas tus archivos estáticos locales (en desarrollo)
+]
+
+# === Archivos multimedia (subidas de usuario, imágenes, PDFs, etc.) ===
 MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
-STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')] 
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')  # 📂 carpeta donde se guardan archivos subidos por usuarios
+
+# === Configuración adicional ===
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 X_FRAME_OPTIONS = 'SAMEORIGIN'
 
-
-
+# === Progressive Web App (PWA) ===
 PWA_APP_NAME = 'ConstruApp'
 PWA_APP_DESCRIPTION = "Control Planner para obras"
 PWA_APP_THEME_COLOR = '#0a1f44'
@@ -177,29 +187,16 @@ PWA_APP_ORIENTATION = 'portrait'
 PWA_APP_START_URL = '/'
 PWA_APP_STATUS_BAR_COLOR = 'default'
 PWA_APP_ICONS = [
-    {
-        'src': '/static/construccion1app/img/logo2.jpeg',
-        'sizes': '512x512'
-    }
+    {'src': '/static/construccion1app/img/logo2.jpeg', 'sizes': '512x512'}
 ]
 PWA_APP_ICONS_APPLE = [
-    {
-        'src': '/static/construccion1app/img/logo2.jpeg',
-        'sizes': '512x512'
-    }
+    {'src': '/static/construccion1app/img/logo2.jpeg', 'sizes': '512x512'}
 ]
 PWA_APP_SPLASH_SCREEN = [
-    {
-        'src': '/static/construccion1app/img/logo2.jpeg',
-        'media': '(prefers-color-scheme: light)'
-    }
+    {'src': '/static/construccion1app/img/logo2.jpeg', 'media': '(prefers-color-scheme: light)'}
 ]
 PWA_APP_DIR = 'ltr'
 PWA_APP_LANG = 'es-ES'
 
-
-
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
-django_heroku.settings(locals())
-STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
+# === Integración con Heroku ===
 django_heroku.settings(locals())
