@@ -1,0 +1,18 @@
+{% extends "construccion1app/base.html" %}
+{% block contenido %}
+<div class="container mt-4">
+    <h3>Mis Notificaciones</h3>
+    {% if notificaciones %}
+        <ul class="list-group">
+            {% for notif in notificaciones %}
+            <li class="list-group-item {% if not notif.leida %}fw-bold{% endif %}">
+                <a href="{% url 'detalle_notificacion' notif.id %}">{{ notif.mensaje }}</a>
+                <small class="text-muted d-block">{{ notif.fecha_creacion|date:"d/m/Y H:i" }}</small>
+            </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p>No tienes notificaciones.</p>
+    {% endif %}
+</div>
+{% endblock %}

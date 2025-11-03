@@ -1,0 +1,20 @@
+{% extends 'construccion1app/base.html'%}
+
+{% block contenido %}
+<div class="container mt-4">
+    <h2 class="mb-4">Mi Perfil</h2>
+
+    <div class="card p-4 shadow">
+        <p><strong>Nombre de usuario:</strong> {{ usuario.username }}</p>
+        <p><strong>Nombre completo:</strong> {{ usuario.first_name }} {{ usuario.last_name }}</p>
+        <p><strong>Email:</strong> {{ usuario.email }}</p>
+        <p><strong>Tipo de usuario:</strong> {{ usuario.tipo_usuario }}</p>
+        <p><strong>Cargo:</strong> {{ usuario.cargo }}</p>
+        {% if empresa %}
+            <p><strong>Empresa:</strong> {{ empresa.nombre }}</p>
+        {% else %}
+            <p><em>No tienes una empresa asignada.</em></p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,22 @@
+{% extends 'construccion1app/base.html' %}
+{% block contenido %}
+<h3>Editar visibilidad: {{ proyecto.nombre }}</h3>
+
+<form method="POST">
+    {% csrf_token %}
+    <div class="mb-3">
+        {% for usuario in usuarios %}
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" 
+                       name="usuarios" value="{{ usuario.id }}"
+                       id="usuario-{{ usuario.id }}"
+                       {% if usuario in proyecto.usuarios_acceso.all %}checked{% endif %}>
+                <label class="form-check-label" for="usuario-{{ usuario.id }}">
+                    {{ usuario.get_full_name }} ({{ usuario.tipo }})
+                </label>
+            </div>
+        {% endfor %}
+    </div>
+    <button type="submit" class="btn btn-primary">Guardar cambios</button>
+</form>
+{% endblock %}

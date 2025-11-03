@@ -1,0 +1,716 @@
+{% extends 'construccion1app/base.html' %}
+
+{% block contenido %}
+{% load crispy_forms_tags %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+    .chart-container {
+        position: relative;
+        height: 320px;
+        max-width: 380px;
+        margin: 0 auto;
+    }
+    .chart-container canvas {
+        width: 100% !important;
+        height: auto !important;
+    }
+    .chart-center-text {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-weight: 700;
+        font-size: 2rem;
+        color: #28a745;
+    }
+    .badge-estado {
+        padding: .35rem .6rem;
+        border-radius: .5rem;
+        font-weight: 600;
+        font-size: .9rem;
+        }
+
+        /* Mapeo de colores */
+        .estado-no_ejecutada { background-color: #6c757d; color: #fff; } /* gris */
+
+        .estado-ejecutada { background-color: #0d6efd; color: #fff; }       /* azul */
+        .estado-revisada    { background-color: #198754; color: #fff; }     /* verde */
+        .estado-observada   { background-color: #dc3545; color: #fff; } 
+        .estado-ejecucion, 
+        .estado-en_ejecucion { 
+        background-color: #ffc107; 
+        color: #000; 
+    }
+        /* rojo */
+
+
+        /* Si tu valor es NO_EJECUTADA con mayúsculas, normalizamos a minúsculas en la plantilla o
+        puedes crear variantes con el nombre exacto; aquí pongo ejemplo flexible */
+
+</style>
+
+{% if messages %}
+  <div class="position-fixed top-0 end-0 p-3" style="z-index: 1080;">
+    {% for message in messages %}
+      <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-lg rounded-3 d-flex align-items-center custom-alert-{{ message.tags }}" 
+           role="alert" style="min-width: 320px; animation: slideIn 0.5s ease;">
+        
+        {% if message.tags == "success" %}
+          <i class="bi bi-check-circle-fill me-2 fs-4"></i>
+        {% elif message.tags == "error" %}
+          <i class="bi bi-x-circle-fill me-2 fs-4"></i>
+        {% elif message.tags == "warning" %}
+          <i class="bi bi-exclamation-triangle-fill me-2 fs-4"></i>
+        {% elif message.tags == "info" %}
+          <i class="bi bi-info-circle-fill me-2 fs-4"></i>
+        {% endif %}
+
+        <div class="flex-grow-1">
+          {{ message }}
+        </div>
+        <button type="button" class="btn-close ms-2" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+    {% endfor %}
+  </div>
+{% endif %}
+
+<style>
+@keyframes slideIn {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+/* ✅ Colores personalizados */
+.custom-alert-success {
+  background: linear-gradient(135deg, #28a745, #218838);
+  color: #fff;
+}
+.custom-alert-success i { color: #fff; }
+
+.custom-alert-error {
+  background: linear-gradient(135deg, #dc3545, #b02a37);
+  color: #fff;
+}
+.custom-alert-error i { color: #fff; }
+
+.custom-alert-warning {
+  background: linear-gradient(135deg, #ffc107, #e0a800);
+  color: #212529;
+}
+.custom-alert-warning i { color: #856404; }
+
+.custom-alert-info {
+  background: linear-gradient(135deg, #17a2b8, #117a8b);
+  color: #fff;
+}
+.custom-alert-info i { color: #fff; }
+</style>
+
+
+<style>
+@keyframes slideIn {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+</style>
+
+
+<div class="container-fluid">
+    <div class="card p-4 shadow-sm">
+        <h1 class="mb-3 text-center">{{ proyecto.nombre }}</h1>
+        {% if request.user.is_superuser or request.user.tipo_usuario == 'superadmin_empresa' %}
+        <div class="text-center mb-4">
+                <form action="{% url 'eliminar_proyecto' proyecto.id %}" method="post" 
+                      onsubmit="return confirm('¿Estás seguro de que quieres eliminar este proyecto? Esta acción no se puede deshacer.');">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger btn-lg shadow-sm">
+                        <i class="bi bi-trash"></i> 
+                    </button>
+                </form>
+        </div>
+        {% endif %}
+
+        {% if request.user.is_superuser or request.user.tipo_usuario in 'superadmin_empresa,admin_empresa' %}
+            {% if mostrar_formulario %}
+                <div class="text-center mb-4">
+                    <button class="btn btn-primary btn-lg shadow-sm" type="button" data-bs-toggle="collapse" data-bs-target="#formAgregarNivel" aria-expanded="false" aria-controls="formAgregarNivel">
+                        <i class="bi bi-plus-circle"></i> Crear Nivel
+                    </button>
+                </div>
+ 
+                <div class="collapse" id="formAgregarNivel">
+                    <div class="card card-body">
+                        <form method="post">
+                            {% csrf_token %}
+                            {{ form|crispy }}
+                            <div class="d-grid mt-3">
+                                <button type="submit" class="btn btn-success">Crear Nivel</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            {% endif %}
+
+        {% endif %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const incidenciaInput = document.querySelector("#id_incidencia");
+    const alerta = document.createElement("div");
+    alerta.classList.add("text-danger", "mt-2");
+    incidenciaInput.parentNode.appendChild(alerta);
+
+    const form = incidenciaInput.closest("form"); // form que contiene el input
+
+    let excedido = false; // bandera para bloquear el submit
+
+    // Validación en input
+    incidenciaInput.addEventListener("input", function () {
+        const valor = parseInt(this.value) || 0;
+
+        fetch("{% url 'sumar_incidencias' proyecto.id %}")  // endpoint que devuelve la suma
+            .then(response => response.json())
+            .then(data => {
+                const sumaExistente = data.suma || 0;
+                if (sumaExistente + valor > 100) {
+                    alerta.innerText = `⚠️ La suma supera 100 (actual: ${sumaExistente}, digitaste ${valor}).`;
+                    excedido = true;
+                } else {
+                    alerta.innerText = "";
+                    excedido = false;
+                }
+            });
+    });
+
+    // Bloquear submit si excede 100
+    form.addEventListener("submit", function (e) {
+        if (excedido) {
+            e.preventDefault(); // bloquea el envío
+            alert("No puedes guardar el nivel: la suma de incidencias supera 100.");
+        }
+    });
+});
+</script>
+
+
+
+        <!-- Gráfico principal (SIEMPRE visible) -->
+        <div class="chart-container">
+            <canvas id="progresoProyecto"></canvas>
+            <div class="chart-center-text">{{ avance_total|floatformat:2 }}%</div>
+        </div>
+
+        <hr class="my-4">
+          <!-- Tabla actividades -->
+                            
+
+
+        {% for nivel in niveles %}
+        <div class="nivel-card">
+            <div class="d-flex justify-content-between align-items-center flex-wrap mb-2">
+                <h4 class="mb-2">{{ nivel.nombre }}</h4>
+               <div class="d-flex flex-wrap gap-2">
+                    <span class="badge bg-success badge-custom">Avance: {{ nivel.avance|floatformat:2 }}%</span>
+                    
+                    {% if request.user.is_superuser or request.user.tipo_usuario == 'superadmin_empresa' %}
+                        <span class="badge bg-primary badge-custom">Incidencia: {{ nivel.incidencia|floatformat:2 }}%</span>
+                        <span class="badge bg-warning text-dark badge-custom">Ponderado: {{ nivel.ponderado|floatformat:2 }}%</span>
+                        <form action="{% url 'eliminar_nivel' nivel.id %}" method="post" class="d-inline"
+                            onsubmit="return confirm('¿Estás seguro de que quieres eliminar este nivel? Esta acción no se puede deshacer.');">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-sm btn-danger me-1">
+                                <i class="bi bi-trash"></i> 
+                            </button>
+                        </form>
+                        <a href="{% url 'agregar_espacio' nivel.id %}" class="btn btn-sm btn-success">Agregar Espacio</a>
+       
+                    {% endif %}
+
+                    {% if request.user.tipo_usuario == 'admin_empresa' %}
+                        <a href="{% url 'agregar_espacio' nivel.id %}" class="btn btn-sm btn-success">Agregar Espacio</a>
+                    {% endif %}
+                </div>
+
+            </div>
+
+            <div class="progress mb-3">
+                <div class="progress-bar bg-success progress-bar-striped" 
+                     role="progressbar" 
+                     style="width: {{ nivel.avance }}%">
+                    {% if request.user.is_superuser or request.user.tipo_usuario == 'superadmin_empresa' %}
+                        {{ nivel.ponderado|floatformat:0 }}%
+                    {% endif %}
+                </div>
+            </div>
+
+            <div>
+                <h5 class="mb-3">Espacios</h5>
+                <div class="row">
+                    {% for e in nivel.espacios %}
+                    <div class="col-12 col-md-6 col-lg-4">
+                        <div class="card espacio-card mb-3 p-3 shadow-sm">
+                            <strong class="d-block mb-2">{{ e.nombre }}</strong>
+
+                           
+                                {% if request.user.is_superuser or request.user.tipo_usuario == 'superadmin_empresa' %}
+                                    <!-- Botón eliminar espacio -->
+                                    <form action="{% url 'eliminar_espacio' e.id %}" method="post" class="position-absolute top-0 end-0 m-2"
+                                        onsubmit="return confirm('¿Estás seguro de que quieres eliminar este espacio? Esta acción no se puede deshacer.');">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-sm btn-danger">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+
+                                    </form>
+                                {% endif %}
+
+                            {% if request.user.is_superuser or request.user.tipo_usuario == 'superadmin_empresa' %}
+                                <span class="badge bg-primary badge-custom">
+                                    Incidencia: {{ e.incidencia|floatformat:2 }}%
+                                </span><br>
+                            {% endif %}
+
+                            <!-- Gráfico de Avance (lo ven todos los tipos de usuario) -->
+                            <div class="d-flex justify-content-center mt-3">
+                                <canvas id="avance-chart-{{ e.id }}" style="max-width: 120px; max-height: 120px;"></canvas>
+                                <div class="fw-bold text-center mt-2">
+                                    {{ e.avance|floatformat:2 }}%
+                                </div>
+                            </div>
+
+                            <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+                            <script>
+                            document.addEventListener("DOMContentLoaded", function () {
+                                var ctx = document.getElementById("avance-chart-{{ e.id }}").getContext("2d");
+                                new Chart(ctx, {
+                                    type: "doughnut",
+                                    data: {
+                                        labels: ["Avance", "Pendiente"],
+                                        datasets: [{
+                                            data: [{{ e.avance|floatformat:2 }}, (100 - {{ e.avance|floatformat:2 }})],
+
+                                            backgroundColor: ["#4CAF50", "#E0E0E0"],
+                                            borderWidth: 1
+                                        }]
+                                    },
+                                    options: {
+                                        responsive: true,
+                                        cutout: "70%",
+                                        plugins: {
+                                            legend: { display: false },
+                                            tooltip: {
+                                                callbacks: {
+                                                    label: function (context) {
+                                                        return context.label + ": " + context.raw + "%";
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                });
+                            });
+                            </script>
+
+
+                            <!-- Botón -->
+                            <button class="btn btn-sm btn-outline-primary mt-3 w-100 toggle-actividades" 
+                                    data-bs-toggle="collapse" 
+                                    data-bs-target="#actividades-{{ e.id }}">
+                                Ver Actividades
+                            </button>
+                           
+
+                            <!-- Tabla actividades -->
+                            
+
+                            <div class="collapse mt-3" id="actividades-{{ e.id }}">
+                                {% if request.user.is_superuser or request.user.tipo_usuario == 'superadmin_empresa' or request.user.tipo_usuario == 'admin_empresa' %}
+                                    {% if e.total_incidencia < 100 %}
+                                        <a href="{% url 'agregar_actividad' e.id %}" class="btn btn-success btn-lg shadow-sm" title="Agregar Actividad">
+                                            <i class="bi bi-plus-circle"></i>
+                                        </a>
+                                            
+
+<!-- Botón Importar Excel -->
+<button type="button" 
+        class="btn btn-warning btn-lg shadow-sm" 
+        data-bs-toggle="modal" 
+        data-bs-target="#importarModal-{{ e.id }}">
+    <i class="bi bi-file-earmark-excel"></i>
+</button>
+{% include 'construccion1app/importar_actividades.html' with espacio=e %}
+
+                                        
+
+                                            <!-- Modal -->
+                                            
+
+                                            <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+                                    {% else %}
+                                        <button type="button" class="btn btn-success btn-lg shadow-sm"
+                                                onclick="alert('No puedes agregar más actividades, ya que la suma de incidencias ya es 100. Si quieres agregar otra debes reducir incidencias de las demás.');">
+                                            <i class="bi bi-plus-circle"></i>
+                                        </button>
+                                    {% endif %}
+                                    <button 
+    type="button" 
+    class="btn btn-info btn-lg shadow-sm" 
+    data-bs-toggle="modal" 
+    data-bs-target="#mapaModal-{{ e.id }}">
+    <i class="bi bi-diagram-3"></i>
+</button>
+
+<div class="modal fade" id="mapaModal-{{ e.id }}" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-centered">
+    <div class="modal-content rounded-4 shadow-lg">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title">Mapa de Actividades</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div id="network-{{ e.id }}" style="height: 600px;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const modalEl = document.getElementById("mapaModal-{{ e.id }}");
+
+  modalEl.addEventListener("shown.bs.modal", function () {
+    fetch("{% url 'mapa_actividades' e.id %}")
+      .then(response => response.json())
+      .then(data => {
+        const nodes = new vis.DataSet(
+          data.nodes.map(n => ({
+            id: n.id,
+            label: n.label,
+            shape: "box", // nodos rectangulares
+            color: n.estado === "ejecutada" ? "#28a745" : 
+                   n.estado === "observada" ? "#ffc107" : 
+                   "#0d6efd", // color según estado
+            font: { color: "#fff", size: 16, face: "Arial", bold: true },
+            margin: 10
+          }))
+        );
+
+        const edges = new vis.DataSet(
+          data.edges.map(e => ({
+            from: e.from,
+            to: e.to,
+            arrows: "to", // flechas que muestran dirección
+            color: { color: "#6c757d" }
+          }))
+        );
+
+        const container = document.getElementById("network-{{ e.id }}");
+
+        const options = {
+          layout: {
+            hierarchical: {
+              enabled: true,
+              direction: "LR", // Left-to-Right
+              sortMethod: "directed"
+            }
+          },
+          edges: {
+            smooth: true
+          },
+          physics: false, // fijo, no se desordena
+          interaction: {
+            dragNodes: true,
+            zoomView: true,
+            dragView: true
+          }
+        };
+
+        new vis.Network(container, { nodes, edges }, options);
+      });
+  });
+});
+</script>
+
+
+
+
+                              
+                                {% endif %}
+                            </a>
+
+                            
+                                <div class="table-responsive">
+                                    <br>
+                                    <table class="table table-borderless align-middle text-center shadow-sm rounded table-primary">
+    <thead class="table-dark">
+        <tr>
+            <th class="text-start">Actividad</th>
+            <th class="text-start">info </th>
+            <th>Avance</th>
+            {% if request.user.is_superuser or request.user.tipo_usuario == 'superadmin_empresa' or request.user.tipo_usuario == 'admin_empresa' %}
+                <th>Incidencia</th>
+                <th>Ponderado</th>
+            {% endif %}
+            <th>Acciones</th>
+            <th>Estado Ejecucion</th>
+            <th>Asignado</th>
+            <th>Justificación</th>
+            <th>Predecesora</th>
+            <th>Sucesora</th>
+            <th>Estado</th>
+            <th>Estado Asignación</th>
+            <th>Fecha Inicio</th>
+            <th>Fecha Fin</th>
+            
+        </tr>
+    </thead>
+
+    <tbody>
+        {% for a in e.actividades %}
+        <tr class="hover-row" id="actividad-{{ a.id }}">
+            <!-- Nombre -->
+            <td class="text-start fw-semibold">{{ a.nombre }}</td>
+            <td class="text-center">
+                {% if a.archivo_informacion %}
+                    {% with a.archivo_informacion.url|lower as archivo %}
+                        {% if archivo|slice:"-4:" == ".pdf" %}
+                            <!-- Abrir PDF en nueva pestaña -->
+                            <a href="{{ a.archivo_informacion.url }}" target="_blank"
+                            class="btn btn-sm btn-outline-info" title="Ver PDF">
+                                <i class="bi bi-file-earmark-pdf"></i>
+                            </a>
+
+                        {% elif archivo|slice:"-4:" in ".jpg.png.gif" or archivo|slice:"-5:" == ".jpeg" %}
+                            <!-- Abrir imagen en nueva pestaña -->
+                            <a href="{{ a.archivo_informacion.url }}" target="_blank"
+                            class="btn btn-sm btn-outline-info" title="Ver Imagen">
+                                <i class="bi bi-image"></i>
+                            </a>
+
+                        {% else %}
+                            <!-- Descargar Word, Excel u otros archivos -->
+                            <a href="{{ a.archivo_informacion.url }}" download
+                            class="btn btn-sm btn-outline-success" title="Descargar Archivo">
+                                <i class="bi bi-download"></i>
+                            </a>
+                        {% endif %}
+                    {% endwith %}
+                {% endif %}
+            </td>
+
+
+
+            <!-- Avance con progressbar -->
+            <td>
+                <div class="progress" style="height: 18px; border-radius: 8px;">
+                    <div class="progress-bar 
+                        {% if a.avance >= 75 %} bg-success 
+                        {% elif a.avance >= 40 %} bg-warning text-dark 
+                        {% else %} bg-danger {% endif %}" 
+                        style="width: {{ a.avance }}%">
+                        {{ a.avance|floatformat:0 }}%
+                    </div>
+                </div>
+            </td>
+
+            <!-- Incidencia / Ponderado -->
+            {% if request.user.is_superuser or request.user.tipo_usuario in 'superadmin_empresa admin_empresa' %}
+                <td><span class="badge bg-primary rounded-pill">{{ a.incidencia|floatformat:2 }}%</span></td>
+                <td><span class="badge bg-warning text-dark rounded-pill">{{ a.ponderado|floatformat:2 }}%</span></td>
+            {% endif %}
+
+            <!-- Acciones -->
+            
+                <td>{% if request.user.is_superuser or request.user.tipo_usuario in 'superadmin_empresa admin_empresa' or a.asignado == request.user and a.habilitada %}
+                    <a href="{% url 'modificar_actividad' a.id %}" class="btn btn-outline-primary btn-sm" title="Modificar Avance">
+                        <i class="bi bi-pencil-square"></i>
+                    </a>
+                    {% if request.user.is_superuser or request.user.tipo_usuario == 'superadmin_empresa' %}
+                    <form action="{% url 'eliminar_actividad' a.id %}" method="post" class="d-inline"
+                        onsubmit="return confirm('¿Estás seguro de que quieres eliminar esta actividad?');">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-outline-danger btn-sm" title="Eliminar Actividad">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </form>
+                    {% endif %}
+                </td>
+            {% else %}
+                <td></td>
+            {% endif %}
+
+            <!-- Estado Ejecución -->
+            <td>
+                 <span class="badge estado-{{ a.estado_ejecucion|lower }}">
+                        {{ a.get_estado_ejecucion_display }}
+                        <small>{{ a.estado_ejecucion }}</small>
+      
+                    
+
+                   
+                </span>
+            </td>
+
+            <!-- Asignado -->
+            <td>
+                {% if a.asignado %}
+                    <span class="badge bg-warning text-dark rounded-pill">{{ a.asignado }}</span>
+                {% else %}
+                    <span class="badge bg-secondary">No asignado</span>
+                {% endif %}
+            </td>
+
+
+
+            <!-- Justificación -->
+            <td>
+                {% if a.justificacion %}
+                    <span class="badge bg-info text-dark">Hubo justificación</span>
+                {% else %}
+                    <span class="badge bg-secondary">Sin justificación</span>
+                {% endif %}
+            </td>
+
+            <!-- Predecesora -->
+            <td>
+                {% if a.predecesora %}
+                    <span class="badge bg-primary">{{ a.predecesora }}</span>
+                {% else %}
+                    <span class="badge bg-secondary">No definido</span>
+                {% endif %}
+            </td>
+
+            <!-- Sucesora -->
+            <td>
+                {% if a.sucesora %}
+                    <span class="badge bg-primary">{{ a.sucesora }}</span>
+                {% else %}
+                    <span class="badge bg-secondary">No definido</span>
+                {% endif %}
+            </td>
+
+            <!-- Habilitada -->
+            <td>
+                {% if a.habilitada %}
+                    <span class="badge bg-success">Actividad habilitada</span>
+                {% else %}
+                    <span class="badge bg-danger">Actividad no habilitada</span>
+                {% endif %}
+            </td>
+
+            <!-- Estado asignación -->
+            <td>
+                {% if a.estado_asignacion == "ASIGNADA" %}
+                    <span class="badge bg-success">Asignada</span>
+                {% else %}
+                    <span class="badge bg-secondary">Sin asignar</span>
+                {% endif %}
+            </td>
+            <!-- Fecha Inicio -->
+            <td>{{ a.fecha_inicio|date:"d/m/Y" }}</td>
+            <!-- Fecha Fin -->  
+            <td>{{ a.fecha_fin|date:"d/m/Y" }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="13" class="text-muted fst-italic">No hay actividades registradas</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+    <!-- Modal de Información -->
+
+
+</table>
+
+
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    // Selecciona todos los botones que tengan clase toggle-actividades
+    document.querySelectorAll('.toggle-actividades').forEach(function (btn) {
+        const targetId = btn.getAttribute('data-bs-target');
+        const target = document.querySelector(targetId);
+
+        // Cuando se abre
+        target.addEventListener('show.bs.collapse', function () {
+            btn.textContent = 'Ocultar Actividades';
+        });
+
+        // Cuando se cierra
+        target.addEventListener('hide.bs.collapse', function () {
+            btn.textContent = 'Ver Actividades';
+        });
+    });
+});
+document.addEventListener('DOMContentLoaded', function() {
+    const ctx = document.getElementById('progresoProyecto').getContext('2d');
+    new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Completado', 'Pendiente'],
+            datasets: [{
+                data: [{{ avance_total }}, 100 - {{ avance_total }}],
+                backgroundColor: [
+                    'rgba(40, 167, 69, 0.85)', 
+                    'rgba(220, 223, 230, 0.6)' 
+                ],
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '70%',
+            plugins: { legend: { display: false } },
+            animation: {
+                animateRotate: true,
+                duration: 1200
+            }
+        }
+    });
+});
+document.addEventListener("DOMContentLoaded", function () {
+    {% for nivel in niveles %}
+        {% for e in nivel.espacios %}
+        (function() {
+            const ctx = document.getElementById('ponderado-chart-{{ e.id }}').getContext('2d');
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Ponderado', 'Restante'],
+                    datasets: [{
+                        data: [{{ e.ponderado }}, 100 - {{ e.ponderado }}],
+                        backgroundColor: [
+                            'rgba(255, 193, 7, 0.9)', // amarillo moderno
+                            'rgba(200, 210, 218, 0.6)' // Gris azulado suave
+                        ],
+                        
+                        borderWidth: -50
+                    }],
+                    
+                },
+                options: {
+                    cutout: '20%',
+                    plugins: { legend: { display: false } },
+                    responsive: false,
+                    maintainAspectRatio: false
+                }
+            });
+        })();
+        {% endfor %}
+    {% endfor %}
+});
+</script>
+{% endblock %}

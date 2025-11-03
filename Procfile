@@ -1,0 +1,1 @@
+web: gunicorn construccion1app.wsgi

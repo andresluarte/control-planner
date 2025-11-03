@@ -1,0 +1,381 @@
+{% extends 'construccion1app/base.html' %}
+{% load crispy_forms_tags %}
+
+{% block contenido %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-10 col-xl-9">
+            <!-- Encabezado -->
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-body text-center py-4" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 0.5rem 0.5rem 0 0;">
+                    <h1 class="mb-0" style="font-weight: 600; font-size: 1.75rem;">Modificar Actividad</h1>
+                </div>
+            </div>
+
+            <!-- Mensajes de Django -->
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            <!-- Formulario Principal -->
+            <div class="card shadow-sm border-0">
+                <div class="card-body p-4">
+                    <form method="post" id="actividadForm" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        {{ form|crispy }}
+                        
+                        <div class="d-grid gap-2 mt-4">
+                            <button type="submit" class="btn btn-primary btn-lg" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; padding: 12px;">
+                                <i class="fas fa-save me-2"></i>Modificar Actividad
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Botón Ver Mapa -->
+            <div class="text-center mt-4">
+                <button id="verMapa" class="btn btn-outline-primary btn-lg">
+                    <i class="fas fa-project-diagram me-2"></i>Ver Mapa de Actividades
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal -->
+<div id="mapaModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:1000; backdrop-filter: blur(5px);">
+    <div style="position:absolute; top:5%; left:5%; width:90%; height:90%; background:white; border-radius:12px; box-shadow: 0 10px 40px rgba(0,0,0,0.3); overflow:hidden;">
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center;">
+            <h3 style="margin: 0; font-size: 1.25rem; font-weight: 600;">Mapa de Actividades</h3>
+            <button id="cerrarMapa" style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 500; transition: all 0.3s;">
+                <i class="fas fa-times me-1"></i>Cerrar
+            </button>
+        </div>
+        <div id="network" style="width:100%; height:calc(100% - 60px);"></div>
+    </div>
+</div>
+
+<style>
+    .card {
+        border-radius: 0.5rem;
+        transition: transform 0.2s;
+    }
+    
+    .card:hover {
+        transform: translateY(-2px);
+    }
+    
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+    }
+    
+    .btn-outline-primary {
+        border: 2px solid #667eea;
+        color: #667eea;
+        font-weight: 500;
+        transition: all 0.3s;
+    }
+    
+    .btn-outline-primary:hover {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-color: #667eea;
+        color: white;
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+    }
+    
+    .estado-changed {
+        animation: highlight 0.6s ease;
+    }
+    
+    @keyframes highlight {
+        0%, 100% { background-color: inherit; }
+        50% { background-color: #fff3cd; }
+    }
+    
+    #cerrarMapa:hover {
+        background: rgba(255,255,255,0.3);
+        transform: scale(1.05);
+    }
+</style>
+
+<script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+<script>
+document.getElementById('verMapa').addEventListener('click', function() {
+    document.getElementById('mapaModal').style.display = 'block';
+    
+    fetch("{% url 'mapa_actividades' espacio.id %}")
+        .then(response => response.json())
+        .then(data => {
+            // --- NODOS ---
+            const nodes = new vis.DataSet(
+                data.nodes.map(n => ({
+                    id: n.id, 
+                    label: n.label,
+                    shape: "box",           
+                    margin: 10,
+                    color: { background: "#e6f2ff", border: "#004085" }, 
+                    font: { color: "#000", size: 16, face: "Arial" }
+                }))
+            );
+
+            // --- ARISTAS ---
+            const edges = new vis.DataSet(
+                data.edges.map(e => {
+                    let edgeColor = { color: "#007bff" };
+                    let width = 2;
+
+                    if (e.tipo === "sucesora") {
+                        edgeColor = { color: "green" };
+                        width = 3;
+                    } else if (e.tipo === "predecesora") {
+                        edgeColor = { color: "red" };
+                        width = 3;
+                    }
+
+                    return {
+                        from: e.from,
+                        to: e.to,
+                        arrows: "to",
+                        color: edgeColor,
+                        width: width,
+                        smooth: { type: "cubicBezier", forceDirection: "horizontal" }
+                    };
+                })
+            );
+
+            const container = document.getElementById('network');
+
+            // --- CONFIGURACIÓN ---
+            const options = {
+                layout: {
+                    hierarchical: {
+                        enabled: true,
+                        direction: "LR",
+                        sortMethod: "directed",
+                        nodeSpacing: 200,
+                        levelSeparation: 150
+                    }
+                },
+                physics: false,
+                edges: {
+                    arrows: {
+                        to: { enabled: true, scaleFactor: 1.2 }
+                    },
+                    smooth: true
+                },
+                interaction: {
+                    dragNodes: true,
+                    zoomView: true
+                }
+            };
+
+            new vis.Network(container, { nodes, edges }, options);
+        });
+});
+
+document.getElementById('cerrarMapa').addEventListener('click', function() {
+    document.getElementById('mapaModal').style.display = 'none';
+});
+</script>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const incidenciaInput = document.querySelector("#id_incidencia");
+    const estadoEjecucionSelect = document.querySelector("#id_estado_ejecucion");
+    const sucesuraSelect = document.querySelector("#id_sucesora");
+    
+    // Verificación de incidencia
+    if (incidenciaInput) {
+        incidenciaInput.addEventListener("input", function() {
+            const incidenciaActual = parseFloat(incidenciaInput.value) || 0;
+            
+            fetch("{% url 'incidencia_restante' espacio.id %}")
+                .then(response => response.json())
+                .then(data => {
+                    const restante = 100 - data.total_otras;
+                    if (incidenciaActual > restante) {
+                        alert(`⚠️ Tu actividad debería tener ${restante}% ya que las demás suman ${data.total_otras}%.`);
+                    }
+                });
+        });
+    }
+    
+    // Verificación de estado de ejecución y sucesora
+    if (estadoEjecucionSelect && sucesuraSelect) {
+        const estadoInicial = estadoEjecucionSelect.value;
+        
+        function obtenerNombreSucesora(sucesuraId) {
+            if (!sucesuraId) return null;
+            const option = sucesuraSelect.querySelector(`option[value="${sucesuraId}"]`);
+            return option ? option.textContent : null;
+        }
+        
+        estadoEjecucionSelect.addEventListener("change", function() {
+            const nuevoEstado = estadoEjecucionSelect.value;
+            const sucesuraId = sucesuraSelect.value;
+            
+            if (estadoInicial !== 'ejecutada' && nuevoEstado === 'ejecutada' && sucesuraId) {
+                const nombreSucesora = obtenerNombreSucesora(sucesuraId);
+                if (nombreSucesora) {
+                    alert(`✅ La actividad sucesora "${nombreSucesora}" será habilitada automáticamente.`);
+                }
+            }
+        });
+        
+        document.getElementById('actividadForm').addEventListener('submit', function(e) {
+            const estadoActual = estadoEjecucionSelect.value;
+            const sucesuraId = sucesuraSelect.value;
+            
+            if (estadoInicial !== 'ejecutada' && estadoActual === 'ejecutada' && sucesuraId) {
+                const nombreSucesora = obtenerNombreSucesora(sucesuraId);
+                if (nombreSucesora) {
+                    if (!confirm(`¿Confirmar cambio a estado "ejecutada"? La actividad sucesora "${nombreSucesora}" será habilitada automáticamente.`)) {
+                        e.preventDefault();
+                        return false;
+                    }
+                }
+            }
+        });
+    }
+});
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const avanceField = document.querySelector('input[name="avance"]');
+    const estadoField = document.querySelector('select[name="estado_ejecucion"]');
+    
+    if (avanceField && estadoField) {
+        let estadoAnterior = estadoField.value;
+        
+        function resaltarCampo() {
+            estadoField.classList.add('estado-changed');
+            setTimeout(() => {
+                estadoField.classList.remove('estado-changed');
+            }, 600);
+        }
+        
+        function actualizarEstado() {
+            const avanceValue = parseFloat(avanceField.value);
+            let nuevoEstado = estadoField.value;
+            
+            if (avanceValue === 100) {
+                nuevoEstado = 'ejecutada';
+            } else if (avanceValue > 0 && avanceValue < 100) {
+                nuevoEstado = 'ejecucion';
+            }
+            
+            if (nuevoEstado !== estadoAnterior) {
+                estadoField.value = nuevoEstado;
+                resaltarCampo();
+                estadoAnterior = nuevoEstado;
+            }
+        }
+        
+        avanceField.addEventListener('input', actualizarEstado);
+        avanceField.addEventListener('change', actualizarEstado);
+        actualizarEstado();
+    }
+});
+</script>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const asignadoSelect = document.querySelector("#id_asignado");
+    const estadoAsignacion = document.querySelector("#id_estado_asignacion");
+    const estadoVisual = document.querySelector("#estadoVisual");
+
+    if (asignadoSelect) {
+        asignadoSelect.addEventListener("change", function () {
+            if (asignadoSelect.value && asignadoSelect.value !== "---") {
+                estadoAsignacion.value = "ASIGNADA";
+                estadoVisual.textContent = "Asignada";
+                estadoVisual.className = "badge bg-success ms-2"; 
+            } else {
+                estadoAsignacion.value = "POR_ASIGNAR";
+                estadoVisual.textContent = "No asignada";
+                estadoVisual.className = "badge bg-secondary ms-2";
+            }
+        });
+    }
+});
+</script>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const aprobacionCheckbox = document.querySelector("#id_aprobacion_calidad");
+    const estadoSelect = document.querySelector("#id_estado_ejecucion");
+
+    if (aprobacionCheckbox && estadoSelect) {
+        let observadaOption = null;
+
+        function quitarObservada() {
+            const opt = estadoSelect.querySelector('option[value="observada"]');
+            if (opt) {
+                observadaOption = opt.cloneNode(true);
+                opt.remove();
+            }
+        }
+
+        function restaurarObservada() {
+            if (observadaOption && !estadoSelect.querySelector('option[value="observada"]')) {
+                estadoSelect.appendChild(observadaOption);
+            }
+        }
+
+        if (!aprobacionCheckbox.checked) {
+            quitarObservada();
+        }
+
+        aprobacionCheckbox.addEventListener("change", function () {
+            if (aprobacionCheckbox.checked) {
+                restaurarObservada();
+            } else {
+                quitarObservada();
+            }
+        });
+    }
+});
+</script>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const avanceField = document.querySelector('input[name="avance"]');
+    if (avanceField) {
+        // Crear un nuevo <select>
+        const select = document.createElement("select");
+        select.name = avanceField.name;
+        select.id = avanceField.id;
+        select.className = avanceField.className || "form-select";
+
+        // Crear las opciones 0% y 100%
+        const opciones = [
+            { valor: 0, texto: "0%" },
+            { valor: 100, texto: "100%" }
+        ];
+
+        opciones.forEach(opt => {
+            const option = document.createElement("option");
+            option.value = opt.valor;
+            option.textContent = opt.texto;
+            if (parseFloat(avanceField.value) === opt.valor) {
+                option.selected = true;
+            }
+            select.appendChild(option);
+        });
+
+        // Reemplazar el input original por el select
+        avanceField.parentNode.replaceChild(select, avanceField);
+    }
+});
+</script>
+
+
+{% endblock %}

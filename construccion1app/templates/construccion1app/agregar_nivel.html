@@ -1,0 +1,14 @@
+{% extends 'construccion1app/base.html' %}
+{% load crispy_forms_tags %}
+
+{% block contenido %}
+<h1>Agregar Nivel</h1>
+
+<form method="post">
+                        {% csrf_token %}
+                        {{ form|crispy }}
+                        <div class="d-grid mt-3">
+                            <button type="submit" class="btn btn-primary">Crear Nivel</button>
+                        </div>
+                    </form>
+{% endblock %}

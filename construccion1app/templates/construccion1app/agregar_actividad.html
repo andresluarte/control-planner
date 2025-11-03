@@ -1,0 +1,250 @@
+{% extends 'construccion1app/base.html' %}
+{% load crispy_forms_tags %}
+
+{% block contenido %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow border-0">
+                <div class="card-body p-4">
+                    <h2 class="text-center mb-4 fw-bold" style="color:#4b56e9;">🧱 Agregar Actividad</h2>
+
+                    <form method="POST" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        {{ form|crispy }}
+                        
+                        <div class="d-grid mt-3">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="bi bi-plus-circle me-2"></i> Crear Actividad
+                            </button>
+                        </div>
+                    </form>
+
+                    <div class="text-center mt-4">
+                        <button id="verMapa" class="btn btn-outline-primary">
+                            <i class="bi bi-diagram-3 me-2"></i> Ver Mapa de Actividades
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal del Mapa -->
+<div id="mapaModal" class="modal-overlay" style="display:none;">
+    <div class="modal-content">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <h5 class="m-0">📍 Mapa de Actividades</h5>
+            <button id="cerrarMapa" class="btn-close btn-sm"></button>
+        </div>
+        <div id="network" style="width:100%; height:80vh; border-radius:8px;"></div>
+    </div>
+</div>
+
+<!-- Librería del mapa -->
+<script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+
+<!-- Scripts funcionales -->
+<script>
+document.getElementById('verMapa').addEventListener('click', function() {
+    document.getElementById('mapaModal').style.display = 'flex';
+    
+    fetch("{% url 'mapa_actividades' espacio.id %}")
+        .then(response => response.json())
+        .then(data => {
+            const nodes = new vis.DataSet(data.nodes.map(n => ({ id: n.id, label: n.label })));
+            const edges = new vis.DataSet(data.edges);
+            const container = document.getElementById('network');
+            new vis.Network(container, { nodes, edges }, {
+                physics: { stabilization: true },
+                edges: { color: '#888' },
+                nodes: { shape: 'dot', size: 15, color: '#667eea', font: { color: '#222' } }
+            });
+        });
+});
+
+document.getElementById('cerrarMapa').addEventListener('click', function() {
+    document.getElementById('mapaModal').style.display = 'none';
+});
+</script>
+
+<!-- Scripts de validación y lógica -->
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const incidenciaInput = document.querySelector("#id_incidencia");
+    
+    if (incidenciaInput) {
+        incidenciaInput.addEventListener("input", function() {
+            const incidenciaActual = parseFloat(incidenciaInput.value) || 0;
+            
+            fetch("{% url 'incidencia_restante' espacio.id %}")
+                .then(response => response.json())
+                .then(data => {
+                    const restante = 100 - data.total_otras;
+                    if (incidenciaActual > restante) {
+                        alert(`⚠️ Tu actividad debería tener ${restante}% ya que las demás suman ${data.total_otras}%.`);
+                    }
+                });
+        });
+    }
+
+    const asignadoSelect = document.querySelector("#id_asignado");
+    const estadoAsignacionSelect = document.querySelector("#id_estado_asignacion");
+    
+    if (asignadoSelect && estadoAsignacionSelect) {
+        asignadoSelect.addEventListener("change", function() {
+            if (this.value) {
+                estadoAsignacionSelect.value = "ASIGNADA";
+                estadoAsignacionSelect.classList.add("estado-changed");
+                setTimeout(() => estadoAsignacionSelect.classList.remove("estado-changed"), 800);
+            } else {
+                estadoAsignacionSelect.value = "POR_ASIGNAR";
+            }
+        });
+    }
+
+    const aprobacionCheckbox = document.querySelector("#id_aprobacion_calidad");
+    const estadoSelect = document.querySelector("#id_estado_ejecucion");
+
+    if (aprobacionCheckbox && estadoSelect) {
+        let observadaOption = null;
+
+        function quitarObservada() {
+            const opt = estadoSelect.querySelector('option[value="observada"]');
+            if (opt) {
+                observadaOption = opt.cloneNode(true);
+                opt.remove();
+            }
+        }
+
+        function restaurarObservada() {
+            if (observadaOption && !estadoSelect.querySelector('option[value="observada"]')) {
+                estadoSelect.appendChild(observadaOption);
+            }
+        }
+
+        if (!aprobacionCheckbox.checked) quitarObservada();
+        aprobacionCheckbox.addEventListener("change", () => {
+            aprobacionCheckbox.checked ? restaurarObservada() : quitarObservada();
+        });
+    }
+
+    const avanceField = document.querySelector('input[name="avance"]');
+    if (avanceField) {
+        const select = document.createElement("select");
+        select.name = avanceField.name;
+        select.id = avanceField.id;
+        select.className = avanceField.className || "form-select";
+
+        [{valor:0,texto:"0%"},{valor:100,texto:"100%"}].forEach(opt=>{
+            const option=document.createElement("option");
+            option.value=opt.valor;
+            option.textContent=opt.texto;
+            if(parseFloat(avanceField.value)===opt.valor)option.selected=true;
+            select.appendChild(option);
+        });
+
+        avanceField.parentNode.replaceChild(select,avanceField);
+    }
+
+    // ========== NUEVA LÓGICA: Mostrar/Ocultar archivo_informacion ==========
+    const informacionCheckbox = document.querySelector("#id_information");
+    const archivoInformacionField = document.querySelector("#div_id_archivo_informacion");
+    const archivoInformacionInput = document.querySelector("#id_archivo_informacion");
+
+    if (informacionCheckbox && archivoInformacionField) {
+        // Función para mostrar/ocultar el campo
+        function toggleArchivoInformacion() {
+            if (informacionCheckbox.checked) {
+                archivoInformacionField.style.display = "block";
+            } else {
+                archivoInformacionField.style.display = "none";
+                // Limpiar el archivo si se desmarca
+                if (archivoInformacionInput) {
+                    archivoInformacionInput.value = "";
+                }
+            }
+        }
+
+        // Ejecutar al cargar la página
+        toggleArchivoInformacion();
+
+        // Escuchar cambios en el checkbox
+        informacionCheckbox.addEventListener("change", toggleArchivoInformacion);
+    }
+    // ========== FIN NUEVA LÓGICA ==========
+});
+</script>
+
+<style>
+/* --- Estilos Generales --- */
+.card {
+    border-radius: 0.75rem;
+    transition: transform 0.2s;
+}
+.card:hover {
+    transform: translateY(-3px);
+}
+.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    transition: all 0.3s ease;
+}
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(102, 126, 234, 0.4);
+}
+.btn-outline-primary {
+    border: 2px solid #667eea;
+    color: #667eea;
+    font-weight: 500;
+    transition: all 0.3s;
+}
+.btn-outline-primary:hover {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #fff;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+}
+.estado-changed {
+    animation: highlight 0.6s ease;
+}
+@keyframes highlight {
+    0%,100% { background-color: inherit; }
+    50% { background-color: #fff3cd; }
+}
+
+/* --- Modal del mapa --- */
+.modal-overlay {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100vw; height: 100vh;
+    background: rgba(0,0,0,0.5);
+    backdrop-filter: blur(4px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+    animation: fadeIn 0.3s ease;
+}
+.modal-content {
+    background: #fff;
+    border-radius: 1rem;
+    width: 85%;
+    max-width: 1000px;
+    padding: 1.5rem;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    position: relative;
+    animation: slideUp 0.3s ease;
+}
+@keyframes fadeIn {
+    from {opacity:0;} to {opacity:1;}
+}
+@keyframes slideUp {
+    from {transform: translateY(20px); opacity:0;}
+    to {transform: translateY(0); opacity:1;}
+}
+</style>
+
+{% endblock %}

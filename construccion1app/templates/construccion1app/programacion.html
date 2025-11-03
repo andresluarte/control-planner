@@ -1,0 +1,927 @@
+{% extends 'construccion1app/base.html' %}
+{% load static %}
+{% load custom_filters %}
+
+{% block contenido %}
+
+<div class="container-fluid px-4 py-3">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold">📅 Programación de Obra - {{ proyecto.nombre }}</h2>
+            <div class="btn-group" role="group">
+                {% if vista == "kanban" %}
+                <a href="?vista=kanban" class="btn btn-primary btn-sm">
+                    <i class="bi bi-kanban"></i> Kanban
+                </a>
+                <a href="?vista=gantt" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-bar-chart"></i> Gantt
+                </a>
+                {% else %}
+                <a href="?vista=kanban" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-kanban"></i> Kanban
+                </a>
+                <a href="?vista=gantt" class="btn btn-primary btn-sm">
+                    <i class="bi bi-bar-chart"></i> Gantt
+                </a>
+                {% endif %}
+            </div>
+        
+    </div>
+
+        <div class="card border-0 shadow-sm mb-4 rounded-4">
+                <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center py-3">
+                    <h5 class="mb-0 fw-bold text-primary d-flex align-items-center">
+                        <i class="bi bi-funnel-fill me-2"></i> Filtros de Actividades
+                    </h5>
+                    <button class="btn btn-sm btn-outline-primary rounded-pill px-3" type="button" 
+                            data-bs-toggle="collapse" data-bs-target="#filtrosCollapse" aria-expanded="true">
+                        <i class="bi bi-sliders"></i> Mostrar / Ocultar
+                    </button>
+                </div>
+            
+                <div class="collapse show" id="filtrosCollapse" data-bs-parent="#mainContent">
+                    <div class="card-body bg-light-subtle rounded-bottom-4 filtros-body">
+                        <form method="get" class="row g-3">
+                            <!-- Filtros principales -->
+                            <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+                                <label for="nombre" class="form-label fw-semibold small text-secondary">
+                                    <i class="bi bi-card-text me-1"></i> Nombre
+                                </label>
+                                <input type="text" name="nombre" id="nombre" 
+                                    value="{{ filtros.nombre }}" 
+                                    placeholder="Buscar por nombre..." 
+                                    class="form-control form-control-sm rounded-pill">
+                                
+                            </div>
+                            <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+                                <label for="espacio" class="form-label fw-semibold small text-secondary">
+                                    <i class="bi bi-card-text me-1"></i> Espacio
+                                </label>
+                                <input type="text" name="espacio" id="espacio" 
+                                    value="{{ filtros.espacio }}" 
+                                    placeholder="ej: Depto 101..." 
+                                    class="form-control form-control-sm rounded-pill">
+                                
+                            </div>
+
+                            <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+                                <label for="asignado" class="form-label fw-semibold small text-secondary">
+                                    <i class="bi bi-person-fill-gear me-1"></i> Asignado
+                                </label>
+                                <select name="asignado" id="asignado" 
+                                        class="form-select form-select-sm rounded-pill">
+                                    <option value="">Todos</option>
+                                    {% for id, nombre in asignados %}
+                                    <option value="{{ id }}" {% if filtros.asignado == id|stringformat:"s" %}selected{% endif %}>
+                                        {{ nombre }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <!-- Filtros adicionales -->
+                            <div class="col-12">
+                                <div class="card border-0 shadow-sm rounded-4">
+                                    <div class="card-body bg-light-subtle rounded-bottom-4">
+                                        <div class="row g-3">
+                                            <!-- Estado de Ejecución -->
+                                            <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+                                                <label for="estado_ejecucion" class="form-label fw-semibold small text-secondary">
+                                                    <i class="bi bi-flag-fill me-1"></i> Estado Ejecución
+                                                </label>
+                                                <select name="estado_ejecucion" id="estado_ejecucion" 
+                                                        class="form-select form-select-sm rounded-pill">
+                                                    <option value="">Todos</option>
+                                                    {% for key, val in ESTADO_EJECUCION_CHOICES.items %}
+                                                    <option value="{{ key }}" {% if filtros.estado_ejecucion == key %}selected{% endif %}>
+                                                        {{ val }}
+                                                    </option>
+                                                    {% endfor %}
+                                                </select>
+                                            </div>
+
+                                            <!-- Estado de Asignación -->
+                                            <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+                                                <label for="estado_asignacion" class="form-label fw-semibold small text-secondary">
+                                                    <i class="bi bi-diagram-3-fill me-1"></i> Estado Asignación
+                                                </label>
+                                                <select name="estado_asignacion" id="estado_asignacion" 
+                                                        class="form-select form-select-sm rounded-pill">
+                                                    <option value="">Todos</option>
+                                                    <option value="POR_ASIGNAR" {% if filtros.estado_asignacion == "POR_ASIGNAR" %}selected{% endif %}>
+                                                        Por asignar
+                                                    </option>
+                                                    <option value="ASIGNADA" {% if filtros.estado_asignacion == "ASIGNADA" %}selected{% endif %}>
+                                                        Asignada
+                                                    </option>
+                                                    <option value="NO_ASIGNADA" {% if filtros.estado_asignacion == "NO_ASIGNADA" %}selected{% endif %}>
+                                                        No asignada
+                                                    </option>
+                                                </select>
+                                            </div>
+
+                                            <!-- Fecha Inicio -->
+                                            <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+                                                <label for="fecha_inicio" class="form-label fw-semibold small text-secondary">
+                                                    <i class="bi bi-calendar-event-fill me-1"></i> Desde
+                                                </label>
+                                                <input type="date" name="fecha_inicio" id="fecha_inicio" 
+                                                    value="{{ filtros.fecha_inicio }}" 
+                                                    class="form-control form-control-sm rounded-pill">
+                                            </div>
+
+                                            <!-- Fecha Fin -->
+                                            <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+                                                <label for="fecha_fin" class="form-label fw-semibold small text-secondary">
+                                                    <i class="bi bi-calendar2-week-fill me-1"></i> Hasta
+                                                </label>
+                                                <input type="date" name="fecha_fin" id="fecha_fin" 
+                                                    value="{{ filtros.fecha_fin }}" 
+                                                    class="form-control form-control-sm rounded-pill">
+                                            </div>
+
+                                            <!-- Avance -->
+                                            <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+                                       
+                                            </div>
+
+                                            <!-- Vista -->
+                                            <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+                                                <label for="vista" class="form-label fw-semibold small text-secondary">
+                                                    <i class="bi bi-layout-text-sidebar me-1"></i> Vista
+                                                </label>
+                                                <select name="vista" id="vista" 
+                                                        class="form-select form-select-sm rounded-pill">
+                                                    <option value="kanban" {% if vista == "kanban" %}selected{% endif %}>
+                                                        Kanban
+                                                    </option>
+                                                    <option value="gantt" {% if vista == "gantt" %}selected{% endif %}>
+                                                        Gantt
+                                                    </option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Botones de acción -->
+                            <div class="col-12 d-flex justify-content-end">
+                                <button type="submit" class="btn btn-primary btn-sm px-4 rounded-pill shadow-sm me-2">
+                                    <i class="bi bi-filter-circle-fill me-1"></i> Aplicar
+                                </button>
+                                <a href="{% url 'programacion_obra' proyecto.id %}" 
+                                class="btn btn-outline-secondary btn-sm px-4 rounded-pill">
+                                    <i class="bi bi-x-circle me-1"></i> Limpiar
+                                </a>
+                                &nbsp;
+                                <a href="{% url 'exportar_actividades_excel' proyecto.id %}?{{ request.GET.urlencode }}" 
+                                class="btn btn-success btn-sm px-4 rounded-pill shadow-sm">
+                                    <i class="bi bi-file-earmark-excel-fill me-1"></i> Exportar Excel Power BI
+                                </a>
+
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            
+        
+        </div>
+
+            <div class="btn-group" role="group">
+                {% if vista == "kanban" %}
+                    <a href="?vista=kanban" class="btn btn-primary btn-sm">
+                        <i class="bi bi-kanban"></i> Kanban
+                    </a>
+                    <a href="?vista=gantt" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-bar-chart"></i> Gantt
+                    </a>
+                {% else %}
+                    <a href="?vista=kanban" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-kanban"></i> Kanban
+                    </a>
+                    <a href="?vista=gantt" class="btn btn-primary btn-sm">
+                        <i class="bi bi-bar-chart"></i> Gantt
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+
+  {% if vista == "kanban" %}
+      {# === VISTA KANBAN === #}
+        <div class="kanban-board">
+            <div class="kanban-scroll-container">
+                {% for estado, actividades in estados.items %}
+                    <div class="kanban-column">
+                        <div class="kanban-header 
+                            {% if estado == 'no_ejecutada' %}header-no-ejecutada
+                            {% elif estado == 'ejecucion' %}header-ejecucion
+                            {% elif estado == 'ejecutada' %}header-ejecutada
+                            {% elif estado == 'observada' %}header-observada
+                            {% elif estado == 'revisada' %}header-revisada
+                            {% endif %}">
+                            <h6 class="mb-0 fw-bold">{{ ESTADO_EJECUCION_CHOICES|get_item:estado }}</h6>
+                            <span class="badge bg-white bg-opacity-25 mt-1">{{ actividades|length }}</span>
+                        </div>
+                        
+                        <div class="kanban-body">
+                            {% for item in actividades %}
+                                <div class="activity-card card-{{ estado }} mb-3">
+                                    <div class="card-status-indicator"></div>
+                                    <h6 class="activity-title mb-2">{{ item.actividad.nombre }}</h6>
+                                    
+                                    <div class="activity-details">
+                                        <div class="detail-item">
+                                            <i class="bi bi-layers"></i>
+                                            <span>{{ item.nivel }}</span>
+                                        </div>
+                                        <div class="detail-item">
+                                            <i class="bi bi-geo-alt"></i>
+                                            <span>{{ item.espacio }}</span>
+                                        </div>
+                                        {% if item.actividad.fecha_inicio %}
+                                            <div class="detail-item">
+                                                <i class="bi bi-calendar-check"></i>
+                                                <span>{{ item.actividad.fecha_inicio|date:"d/m/Y" }}</span>
+                                            </div>
+                                        {% endif %}
+                                        {% if item.actividad.fecha_fin %}
+                                            <div class="detail-item">
+                                                <i class="bi bi-calendar-x"></i>
+                                                <span>{{ item.actividad.fecha_fin|date:"d/m/Y" }}</span>
+                                            </div>
+                                        {% endif %}
+                                        {% if item.asignado %}
+                                            <div class="detail-item">
+                                                <i class="bi bi-person-circle"></i>
+                                                <span>{{ item.asignado }}</span>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            {% empty %}
+                                <div class="empty-state">
+                                    <i class="bi bi-inbox"></i>
+                                    <p>Sin actividades</p>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+
+  {% else %}
+      {# === VISTA GANTT REAL === #}
+        <div class="gantt-container">
+            <div class="gantt-wrapper">
+                {# Sidebar con nombres de actividades #}
+                <div class="gantt-sidebar">
+                    <div class="gantt-sidebar-header">
+                        <div class="task-header">Actividad</div>
+                    </div>
+                    <div class="gantt-sidebar-body">
+                        {% for estado, actividades in estados.items %}
+                            {% for item in actividades %}
+                                {% if item.actividad.fecha_inicio and item.actividad.fecha_fin %}
+                                    <div class="gantt-task-row gantt-task-{{ estado }}">
+                                        <div class="task-name">{{ item.actividad.nombre }}</div>
+                                        <div class="task-info">
+                                            <span class="badge badge-{{ estado }}">{{ ESTADO_EJECUCION_CHOICES|get_item:estado }}</span>
+                                        </div>
+                                        <div class="task-location">{{ item.nivel }} - {{ item.espacio }}</div>
+                                    </div>
+                                {% endif %}
+                            {% endfor %}
+                        {% endfor %}
+                    </div>
+                </div>
+
+                {# Timeline y barras Gantt #}
+                <div class="gantt-chart-area">
+                    <div class="gantt-timeline-header" id="ganttTimeline">
+                        {# El timeline se generará con JavaScript #}
+                    </div>
+                    <div class="gantt-chart-body" id="ganttChart">
+                        {# Las barras se generarán con JavaScript #}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+      {# JavaScript para generar el Gantt dinámicamente #}
+      <script>
+      document.addEventListener('DOMContentLoaded', function() {
+          // Datos de actividades
+          const actividades = [
+              {% for estado, actividades in estados.items %}
+                  {% for item in actividades %}
+                      {% if item.actividad.fecha_inicio and item.actividad.fecha_fin %}
+                          {
+                              nombre: "{{ item.actividad.nombre|escapejs }}",
+                              fechaInicio: new Date("{{ item.actividad.fecha_inicio|date:'Y-m-d' }}"),
+                              fechaFin: new Date("{{ item.actividad.fecha_fin|date:'Y-m-d' }}"),
+                              estado: "{{ estado }}",
+                              estadoEjecucion: "{{ ESTADO_EJECUCION_CHOICES|get_item:estado|escapejs }}",
+                              nivel: "{{ item.nivel|escapejs }}",
+                              espacio: "{{ item.espacio|escapejs }}"
+                          },
+                      {% endif %}
+                  {% endfor %}
+              {% endfor %}
+          ];
+
+          if (actividades.length === 0) {
+              document.getElementById('ganttTimeline').innerHTML = '<div class="empty-gantt">No hay actividades con fechas definidas</div>';
+              return;
+          }
+
+          // Encontrar fecha mínima y máxima
+          let minDate = new Date(Math.min(...actividades.map(a => a.fechaInicio)));
+          let maxDate = new Date(Math.max(...actividades.map(a => a.fechaFin)));
+
+          // Ajustar al inicio del mes
+          minDate = new Date(minDate.getFullYear(), minDate.getMonth(), 1);
+          // Ajustar al final del mes
+          maxDate = new Date(maxDate.getFullYear(), maxDate.getMonth() + 1, 0);
+
+          // Generar meses
+          const meses = [];
+          let currentDate = new Date(minDate);
+          
+          while (currentDate <= maxDate) {
+              const year = currentDate.getFullYear();
+              const month = currentDate.getMonth();
+              const daysInMonth = new Date(year, month + 1, 0).getDate();
+              
+              meses.push({
+                  year: year,
+                  month: month,
+                  monthName: currentDate.toLocaleString('es', { month: 'short' }),
+                  days: daysInMonth,
+                  startDate: new Date(year, month, 1)
+              });
+              
+              currentDate.setMonth(currentDate.getMonth() + 1);
+          }
+
+          // Calcular días totales
+          const totalDays = Math.ceil((maxDate - minDate) / (1000 * 60 * 60 * 24)) + 1;
+          const dayWidth = 14; // píxeles por día
+
+          // Generar timeline header
+          let timelineHTML = '<div class="timeline-months">';
+          meses.forEach(mes => {
+              const monthWidth = mes.days * dayWidth;
+              timelineHTML += `
+                  <div class="month-header" style="width: ${monthWidth}px">
+                      <div class="month-name">${mes.monthName} ${mes.year}</div>
+                      <div class="month-days">`;
+              
+              for (let day = 1; day <= mes.days; day++) {
+                  timelineHTML += `<div class="day-cell" style="width: ${dayWidth}px">${day}</div>`;
+              }
+              
+              timelineHTML += `</div></div>`;
+          });
+          timelineHTML += '</div>';
+          
+          document.getElementById('ganttTimeline').innerHTML = timelineHTML;
+
+          // Generar barras Gantt
+          let chartHTML = '';
+          actividades.forEach(actividad => {
+              const startOffset = Math.floor((actividad.fechaInicio - minDate) / (1000 * 60 * 60 * 24));
+              const duration = Math.ceil((actividad.fechaFin - actividad.fechaInicio) / (1000 * 60 * 60 * 24)) + 1;
+              
+              const leftPosition = startOffset * dayWidth;
+              const barWidth = duration * dayWidth;
+
+              const colorClass = `gantt-bar-${actividad.estado}`;
+              
+              chartHTML += `
+                  <div class="gantt-bar-row">
+                      <div class="gantt-bar ${colorClass}" 
+                           style="left: ${leftPosition}px; width: ${barWidth}px;"
+                           title="${actividad.nombre} - ${actividad.estadoEjecucion}">
+                          <div class="gantt-bar-content">
+                              <span class="gantt-bar-label">${actividad.nombre}</span>
+                              <span class="gantt-bar-estado">${actividad.estadoEjecucion}</span>
+                              <span class="gantt-bar-estado">${actividad.espacio}</span>
+                              <span class="gantt-bar-estado">${actividad.nivel}</span>
+                              <small class="gantt-bar-dates">
+                                  ${actividad.fechaInicio.toLocaleDateString('es-CL')} - ${actividad.fechaFin.toLocaleDateString('es-CL')}
+                              </small>
+                          </div>
+                      </div>
+                  </div>
+              `;
+          });
+          
+          document.getElementById('ganttChart').innerHTML = chartHTML;
+
+          // Sincronizar scroll
+          const timeline = document.getElementById('ganttTimeline');
+          const chart = document.getElementById('ganttChart');
+          
+          timeline.addEventListener('scroll', () => {
+              chart.scrollLeft = timeline.scrollLeft;
+          });
+          
+          chart.addEventListener('scroll', () => {
+              timeline.scrollLeft = chart.scrollLeft;
+          });
+      });
+      
+      </script>
+  {% endif %}
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const collapse = document.getElementById('filtrosCollapse');
+    const mainContainer = document.querySelector('.kanban-board, .gantt-container');
+
+    collapse.addEventListener('hidden.bs.collapse', () => {
+        if (mainContainer) mainContainer.scrollIntoView({ behavior: 'smooth' });
+    });
+});
+</script>
+
+<style>
+/* === FILTROS OPTIMIZADOS === */
+.filtros-body {
+  transition: all 0.3s ease;
+  max-height: 100%;
+  overflow: hidden;
+}
+
+.toggle-filtros-btn {
+  transition: all 0.2s ease;
+}
+
+.toggle-filtros-btn.collapsed i {
+  transform: rotate(180deg);
+}
+
+#filtrosCollapse.collapse:not(.show) {
+  display: block;
+  height: 0;
+  overflow: hidden;
+  padding: 0;
+  margin: 0;
+}
+
+/* Evita espacio residual cuando está colapsado */
+#filtrosCollapse.collapsing {
+  height: 0 !important;
+  overflow: hidden !important;
+}
+
+/* RESPONSIVO FILTROS */
+@media (max-width: 992px) {
+  .filtros-body form .col-lg-3 {
+    flex: 0 0 50%;
+    max-width: 50%;
+  }
+}
+
+@media (max-width: 768px) {
+  .filtros-body form .col-lg-3,
+  .filtros-body form .col-md-4,
+  .filtros-body form .col-sm-6 {
+    flex: 0 0 100%;
+    max-width: 100%;
+  }
+
+  .toggle-filtros-btn {
+    width: 100%;
+    margin-top: 0.5rem;
+  }
+}
+
+/* === KANBAN STYLES === */
+.kanban-board {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 1rem;
+    overflow-x: auto;
+}
+
+.kanban-scroll-container {
+    display: flex;
+    gap: 1.5rem;
+    min-width: max-content;
+    padding-bottom: 1rem;
+}
+
+.kanban-column {
+    min-width: 320px;
+    max-width: 320px;
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.kanban-header {
+    padding: 1rem;
+    border-radius: 8px 8px 0 0;
+    text-align: center;
+    color: white;
+}
+
+.header-no-ejecutada { background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%); color: #000 !important; }
+.header-ejecucion { background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%); }
+.header-ejecutada { background: linear-gradient(135deg, #198754 0%, #146c43 100%); }
+.header-observada { background: linear-gradient(135deg, #ffc107 0%, #ffb000 100%); }
+.header-revisada { background: linear-gradient(135deg, #0dcaf0 0%, #0aa2c0 100%); }
+
+.kanban-body {
+    padding: 1rem;
+    overflow-y: auto;
+    max-height: calc(100vh - 250px);
+    flex: 1;
+}
+
+.kanban-body::-webkit-scrollbar {
+    width: 6px;
+}
+
+.kanban-body::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+.kanban-body::-webkit-scrollbar-thumb {
+    background: #cbd5e0;
+    border-radius: 10px;
+}
+
+.activity-card {
+    background: rgb(255, 255, 255);
+    border-radius: 8px;
+    padding: 1rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+    border-left: 4px solid;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.activity-card:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    transform: translateY(-2px);
+}
+
+.card-no-ejecutada { border-left-color: #6c757d; }
+.card-ejecucion { border-left-color: #0d6efd; }
+.card-ejecutada { border-left-color: #198754; }
+.card-observada { border-left-color: #ffc107; }
+.card-revisada { border-left-color: #0dcaf0; }
+
+.activity-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #2d3748;
+    margin-bottom: 0.75rem;
+}
+
+.activity-details {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.detail-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    color: #64748b;
+}
+
+.detail-item i {
+    font-size: 0.9rem;
+    width: 16px;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: #94a3b8;
+}
+
+.empty-state i {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    opacity: 0.3;
+}
+
+.empty-state p {
+    margin: 0;
+    font-size: 0.9rem;
+}
+
+/* === GANTT REAL STYLES === */
+.gantt-container {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    overflow: hidden;
+}
+
+.gantt-wrapper {
+    display: flex;
+    height: calc(100vh - 220px);
+    min-height: 500px;
+}
+
+.gantt-sidebar {
+    width: 300px;
+    border-right: 2px solid #e2e8f07a;
+    display: flex;
+    flex-direction: column;
+    background: #ffffff88;
+    flex-shrink: 0;
+}
+
+.gantt-sidebar-header {
+    padding: 1rem;
+    background: #2d3748;
+    color: rgb(255, 255, 255);
+    border-bottom: 2px solid #1a202c;
+    height: 100px;
+    display: flex;
+    align-items: center;
+}
+
+.task-header {
+    font-weight: 700;
+    font-size: 1rem;
+}
+
+.gantt-sidebar-body {
+    overflow-y: auto;
+    flex: 1;
+}
+
+.gantt-task-row {
+    padding: 1rem;
+    border-bottom: 1px solid #e2e8f0;
+    border-left: 4px solid;
+    height: 120px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    background: rgb(158, 155, 155);
+    transition: background 0.2s;
+}
+
+.gantt-task-row:hover {
+    background: #006fdd77;
+}
+
+.gantt-task-no-ejecutada { border-left-color: #6c757d; }
+.gantt-task-ejecucion { border-left-color: #0d6efd; }
+.gantt-task-ejecutada { border-left-color: #198754; }
+.gantt-task-observada { border-left-color: #ffc107; }
+.gantt-task-revisada { border-left-color: #0dcaf0; }
+
+.task-name {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: #ffffff;
+    margin-bottom: 0.4rem;
+    line-height: 1.3;
+}
+
+.task-info {
+    margin-bottom: 0.3rem;
+}
+
+.task-location {
+    font-size: 0.75rem;
+    color: #ffffff;
+}
+
+.badge {
+    font-size: 0.7rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: 3px;
+    font-weight: 600;
+}
+
+.badge-no-ejecutada { background: #6c757d; color: #000; font-weight: 700; }
+.badge-ejecucion { background: #0d6efd; color: white; }
+.badge-ejecutada { background: #198754; color: white; }
+.badge-observada { background: #ffc107; color: #000; }
+.badge-revisada { background: #0dcaf0; color: #000; }
+
+/* === GANTT CHART AREA === */
+.gantt-chart-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.gantt-timeline-header {
+    background: #2d3748;
+    color: white;
+    border-bottom: 2px solid #1a202c;
+    overflow-x: auto;
+    overflow-y: hidden;
+    height: 100px;
+}
+
+.gantt-timeline-header::-webkit-scrollbar {
+    height: 0;
+}
+
+.timeline-months {
+    display: flex;
+    height: 100%;
+}
+
+.month-header {
+    border-right: 2px solid #1a202c;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+}
+
+.month-name {
+    padding: 0.5rem;
+    font-weight: 700;
+    text-align: center;
+    border-bottom: 1px solid #4a5568;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+}
+
+.month-days {
+    display: flex;
+    flex: 1;
+}
+
+.day-cell {
+    border-right: 1px solid #4a5568;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 500;
+    flex-shrink: 0;
+}
+
+.gantt-chart-body {
+    flex: 1;
+    overflow: auto;
+    position: relative;
+    background: 
+        repeating-linear-gradient(
+            to right,
+            transparent,
+            transparent 29px,
+            #e2e8f0 29px,
+            #e2e8f0 30px
+        );
+}
+
+.gantt-bar-row {
+    height: 100px;
+    border-bottom: 1px solid #e2e8f0;
+    position: relative;
+}
+
+.gantt-bar {
+    position: absolute;
+    height: 83px;
+    top: 22px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    padding: 0.5rem 0.75rem;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    transition: all 0.3s ease;
+    cursor: pointer;
+    min-width: 60px;
+}
+
+.gantt-bar:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+    z-index: 10;
+}
+
+.gantt-bar-no-ejecutada { 
+    background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+}
+.gantt-bar-no-ejecutada .gantt-bar-content {
+    color: #000;
+    font-weight: 600;
+}
+.gantt-bar-ejecucion { 
+    background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
+}
+.gantt-bar-ejecutada { 
+    background: linear-gradient(135deg, #198754 0%, #146c43 100%);
+}
+.gantt-bar-observada { 
+    background: linear-gradient(135deg, #ffc107 0%, #ffb000 100%);
+}
+.gantt-bar-revisada { 
+    background: linear-gradient(135deg, #0dcaf0 0%, #0aa2c0 100%);
+}
+
+.gantt-bar-content {
+    display: flex;
+    flex-direction: column;
+    color: rgb(0, 0, 0);
+    width: 100%;
+    overflow: hidden;
+}
+
+.gantt-bar-label {
+    font-weight: 600;
+    font-size: 0.8rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.gantt-bar-estado {
+    font-weight: 500;
+    font-size: 0.7rem;
+    opacity: 0.9;
+    white-space: nowrap;
+}
+
+.gantt-bar-dates {
+    font-size: 0.7rem;
+    opacity: 0.95;
+    margin-top: 0.1rem;
+    white-space: nowrap;
+}
+
+.empty-gantt {
+    padding: 3rem;
+    text-align: center;
+    color: #94a3b8;
+    font-size: 1.1rem;
+}
+
+/* === SCROLLBAR STYLES === */
+.gantt-chart-body::-webkit-scrollbar,
+.gantt-sidebar-body::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.gantt-chart-body::-webkit-scrollbar-track,
+.gantt-sidebar-body::-webkit-scrollbar-track {
+    background: #838383;
+}
+
+.gantt-chart-body::-webkit-scrollbar-thumb,
+.gantt-sidebar-body::-webkit-scrollbar-thumb {
+    background: #cbd5e0;
+    border-radius: 10px;
+}
+
+.gantt-chart-body::-webkit-scrollbar-thumb:hover,
+.gantt-sidebar-body::-webkit-scrollbar-thumb:hover {
+    background: #a0aec0;
+}
+
+/* === RESPONSIVE === */
+@media (max-width: 992px) {
+    .gantt-sidebar {
+        width: 250px;
+    }
+    
+    .kanban-column {
+        min-width: 280px;
+        max-width: 280px;
+    }
+}
+
+@media (max-width: 768px) {
+    .gantt-wrapper {
+        flex-direction: column;
+    }
+    
+    .gantt-sidebar {
+        width: 100%;
+        border-right: none;
+        border-bottom: 2px solid #e2e8f0;
+        max-height: 300px;
+    }
+    
+    .gantt-sidebar-header {
+        height: 60px;
+    }
+}
+</style>
+
+{% endblock %}

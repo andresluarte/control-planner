@@ -1,0 +1,44 @@
+{% extends 'construccion1app/base.html' %}
+{% load crispy_forms_tags %}
+
+{% block contenido %}
+<h1>Agregar Espacio a : {{ nivel.nombre }}</h1>
+
+<form method="post" id="espacioForm">
+    {% csrf_token %}
+    {{ form|crispy }}
+    <div class="d-grid mt-3">
+        <button type="submit" class="btn btn-primary">Crear Espacio</button>
+    </div>
+</form>
+
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const incidenciaInput = document.getElementById("id_incidencia");
+        const form = document.getElementById("espacioForm");
+        let totalActual = {{ total_actual|default:0 }};
+
+        incidenciaInput.addEventListener("input", function () {
+            let nuevaIncidencia = parseFloat(this.value) || 0;
+            let suma = totalActual + nuevaIncidencia;
+
+            if (suma > 100) {
+                alert(`La suma ya lleva ${totalActual}, y con lo ingresado sería ${suma}. Por favor corrige el valor.`);
+                this.value = "";
+            }
+        });
+
+        form.addEventListener("submit", function (e) {
+            let nuevaIncidencia = parseFloat(incidenciaInput.value) || 0;
+            let suma = totalActual + nuevaIncidencia;
+
+            if (suma > 100) {
+                e.preventDefault();
+                alert(`No se puede guardar: la suma (${suma}) supera 100.`);
+            }
+        });
+    });
+</script>
+
+{% endblock %}
