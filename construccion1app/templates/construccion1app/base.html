@@ -153,40 +153,48 @@
 
 </script>
 
-
 <script>
 if ('serviceWorker' in navigator && 'PushManager' in window) {
     navigator.serviceWorker.register("{% static 'serviceworker.js' %}")
-    .then(function(registration) {
-        console.log('ServiceWorker registrado:', registration);
+        .then(function(registration) {
+            console.log('ServiceWorker registrado:', registration);
 
-        registration.pushManager.getSubscription().then(function(subscription) {
-            if (subscription) {
-                console.log('Ya existe suscripción:', subscription);
-                return subscription;
+            if (!vapidKey) {
+                console.error('VAPID_PUBLIC_KEY no está definida');
+                return;
             }
 
-            const vapidKey = "{{ VAPID_PUBLIC_KEY }}";  // desde settings
-            return registration.pushManager.subscribe({
-                userVisibleOnly: true,
-                applicationServerKey: urlBase64ToUint8Array(vapidKey)
-            });
-        }).then(function(subscription) {
-            if (!subscription) return;
+            registration.pushManager.getSubscription().then(function(subscription) {
+                if (subscription) {
+                    console.log('Ya existe suscripción:', subscription);
+                    return subscription;
+                }
 
-            // Enviar a la vista estándar de django-webpush
-            fetch("{% url 'webpush:subscribe' %}", {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': '{{ csrf_token }}'
-                },
-                body: JSON.stringify(subscription)
-            }).then(resp => resp.json())
-              .then(data => console.log('Suscripción guardada:', data))
-              .catch(err => console.error('Error guardando suscripción:', err));
-        }).catch(err => console.error('Error en suscripción:', err));
-    });
+                // Suscribirse al Push Service
+                return registration.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: urlBase64ToUint8Array(vapidKey)
+                });
+            }).then(function(newSubscription) {
+                if (!newSubscription) return;
+
+                console.log('Suscripción exitosa:', newSubscription);
+
+                // Guardar suscripción en el backend
+                fetch("{% url 'suscribir_notificaciones' %}", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    },
+                    body: JSON.stringify(newSubscription)
+                }).then(resp => resp.json())
+                  .then(data => console.log('Respuesta backend:', data))
+                  .catch(err => console.error('Error guardando suscripción:', err));
+            }).catch(function(err) {
+                console.error('Error en suscripción:', err);
+            });
+        });
 }
 
 // Helper para convertir VAPID key
@@ -199,8 +207,6 @@ function urlBase64ToUint8Array(base64String) {
     return new Uint8Array([...rawData].map(char => char.charCodeAt(0)));
 }
 </script>
-
-
 
 
 </body>
