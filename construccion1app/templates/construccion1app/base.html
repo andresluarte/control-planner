@@ -1,7 +1,8 @@
+{% load pwa %}
 <!doctype html>
 {% load static %}
 {% load webpush_notifications %}
-{% load pwa %}
+
     
 <html lang="es">
 
@@ -146,17 +147,7 @@
 
     {% block js %}{% endblock %}
 
-<script>
-if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register("{% static 'js/serviceworker.js' %}")
-    .then(function(reg) {
-        console.log("Service Worker registrado:", reg);
-    })
-    .catch(function(err) {
-        console.error("Error registrando Service Worker:", err);
-    });
-}
-</script>
+
 <script>
 if ('serviceWorker' in navigator && 'PushManager' in window) {
     navigator.serviceWorker.ready.then(function(registration) {
