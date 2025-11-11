@@ -4,7 +4,7 @@ from .views import home, MisProyectosViewHome,sumar_incidencias,programacion_obr
 from django.contrib.auth import views as auth_views
 
 urlpatterns = [
-    path('', MisProyectosViewHome.as_view(), name='mis_proyectos'),
+   
     path('mis-proyectos/', MisProyectosViewHome.as_view(), name='mis_proyectos'),
     path('login/', login_view, name='login'),
     path('logout/', logout_view, name='logout'),

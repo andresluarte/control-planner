@@ -155,22 +155,25 @@
 
 <script>
 if ('serviceWorker' in navigator && 'PushManager' in window) {
-    navigator.serviceWorker.register("{% static 'serviceworker.js' %}")
+    navigator.serviceWorker.register("{% static 'serviceworker.js' %}", { scope: '/' })
         .then(function(registration) {
             console.log('ServiceWorker registrado:', registration);
 
+            // Asegúrate de tener la clave VAPID en tu contexto
+            const vapidKey = "{{ VAPID_PUBLIC_KEY|safe }}";
             if (!vapidKey) {
                 console.error('VAPID_PUBLIC_KEY no está definida');
                 return;
             }
 
+            // Verificar si ya hay suscripción
             registration.pushManager.getSubscription().then(function(subscription) {
                 if (subscription) {
                     console.log('Ya existe suscripción:', subscription);
                     return subscription;
                 }
 
-                // Suscribirse al Push Service
+                // Crear nueva suscripción
                 return registration.pushManager.subscribe({
                     userVisibleOnly: true,
                     applicationServerKey: urlBase64ToUint8Array(vapidKey)
@@ -180,7 +183,7 @@ if ('serviceWorker' in navigator && 'PushManager' in window) {
 
                 console.log('Suscripción exitosa:', newSubscription);
 
-                // Guardar suscripción en el backend
+                // Enviar al backend
                 fetch("{% url 'suscribir_notificaciones' %}", {
                     method: 'POST',
                     headers: {
@@ -188,16 +191,20 @@ if ('serviceWorker' in navigator && 'PushManager' in window) {
                         'X-CSRFToken': '{{ csrf_token }}'
                     },
                     body: JSON.stringify(newSubscription)
-                }).then(resp => resp.json())
-                  .then(data => console.log('Respuesta backend:', data))
-                  .catch(err => console.error('Error guardando suscripción:', err));
+                })
+                .then(resp => resp.json())
+                .then(data => console.log('Respuesta backend:', data))
+                .catch(err => console.error('Error guardando suscripción:', err));
             }).catch(function(err) {
                 console.error('Error en suscripción:', err);
             });
+        })
+        .catch(function(error) {
+            console.error('Error registrando ServiceWorker:', error);
         });
 }
 
-// Helper para convertir VAPID key
+// Helper para convertir la VAPID key
 function urlBase64ToUint8Array(base64String) {
     const padding = '='.repeat((4 - base64String.length % 4) % 4);
     const base64 = (base64String + padding)
@@ -207,6 +214,7 @@ function urlBase64ToUint8Array(base64String) {
     return new Uint8Array([...rawData].map(char => char.charCodeAt(0)));
 }
 </script>
+
 
 
 </body>
