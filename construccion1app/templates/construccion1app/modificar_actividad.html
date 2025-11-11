@@ -320,42 +320,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
 <script>
 document.addEventListener("DOMContentLoaded", function () {
-    const aprobacionCheckbox = document.querySelector("#id_aprobacion_calidad");
-    const estadoSelect = document.querySelector("#id_estado_ejecucion");
-
-    if (aprobacionCheckbox && estadoSelect) {
-        let observadaOption = null;
-
-        function quitarObservada() {
-            const opt = estadoSelect.querySelector('option[value="observada"]');
-            if (opt) {
-                observadaOption = opt.cloneNode(true);
-                opt.remove();
-            }
-        }
-
-        function restaurarObservada() {
-            if (observadaOption && !estadoSelect.querySelector('option[value="observada"]')) {
-                estadoSelect.appendChild(observadaOption);
-            }
-        }
-
-        if (!aprobacionCheckbox.checked) {
-            quitarObservada();
-        }
-
-        aprobacionCheckbox.addEventListener("change", function () {
-            if (aprobacionCheckbox.checked) {
-                restaurarObservada();
-            } else {
-                quitarObservada();
-            }
-        });
-    }
-});
-</script>
-<script>
-document.addEventListener("DOMContentLoaded", function () {
     const avanceField = document.querySelector('input[name="avance"]');
     if (avanceField) {
         // Crear un nuevo <select>
