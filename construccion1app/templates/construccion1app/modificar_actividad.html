@@ -257,44 +257,7 @@ document.addEventListener("DOMContentLoaded", function() {
 });
 </script>
 
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const avanceField = document.querySelector('input[name="avance"]');
-    const estadoField = document.querySelector('select[name="estado_ejecucion"]');
-    
-    if (avanceField && estadoField) {
-        let estadoAnterior = estadoField.value;
-        
-        function resaltarCampo() {
-            estadoField.classList.add('estado-changed');
-            setTimeout(() => {
-                estadoField.classList.remove('estado-changed');
-            }, 600);
-        }
-        
-        function actualizarEstado() {
-            const avanceValue = parseFloat(avanceField.value);
-            let nuevoEstado = estadoField.value;
-            
-            if (avanceValue === 100) {
-                nuevoEstado = 'ejecutada';
-            } else if (avanceValue > 0 && avanceValue < 100) {
-                nuevoEstado = 'ejecucion';
-            }
-            
-            if (nuevoEstado !== estadoAnterior) {
-                estadoField.value = nuevoEstado;
-                resaltarCampo();
-                estadoAnterior = nuevoEstado;
-            }
-        }
-        
-        avanceField.addEventListener('input', actualizarEstado);
-        avanceField.addEventListener('change', actualizarEstado);
-        actualizarEstado();
-    }
-});
-</script>
+
 
 <script>
 document.addEventListener("DOMContentLoaded", function () {
