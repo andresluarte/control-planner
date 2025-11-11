@@ -278,38 +278,61 @@ document.addEventListener("DOMContentLoaded", function () {
                                 </div>
                             </div>
 
-                            <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-                            <script>
-                            document.addEventListener("DOMContentLoaded", function () {
-                                var ctx = document.getElementById("avance-chart-{{ e.id }}").getContext("2d");
-                                new Chart(ctx, {
-                                    type: "doughnut",
-                                    data: {
-                                        labels: ["Avance", "Pendiente"],
-                                        datasets: [{
-                                            data: [{{ e.avance|floatformat:2 }}, (100 - {{ e.avance|floatformat:2 }})],
+                            
+<!-- ✅ Gráfico principal -->
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const canvas = document.getElementById("progresoProyecto");
 
-                                            backgroundColor: ["#4CAF50", "#E0E0E0"],
-                                            borderWidth: 1
-                                        }]
-                                    },
-                                    options: {
-                                        responsive: true,
-                                        cutout: "70%",
-                                        plugins: {
-                                            legend: { display: false },
-                                            tooltip: {
-                                                callbacks: {
-                                                    label: function (context) {
-                                                        return context.label + ": " + context.raw + "%";
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                });
-                            });
-                            </script>
+    // Aseguramos que el elemento exista antes de intentar dibujar
+    if (!canvas) {
+        console.error("❌ No se encontró el canvas #progresoProyecto en el DOM.");
+        return;
+    }
+
+    const ctx = canvas.getContext("2d");
+    const avance = parseFloat("{{ avance_total|default:0 }}");
+
+    // Destruye el gráfico previo si existía (para evitar duplicación)
+    if (window.progresoProyectoChart) {
+        window.progresoProyectoChart.destroy();
+    }
+
+    // ✅ Crear gráfico circular principal
+    window.progresoProyectoChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Completado', 'Pendiente'],
+            datasets: [{
+                data: [avance, 100 - avance],
+                backgroundColor: ['#28a745', '#e9ecef'], // verde y gris claro
+                borderColor: '#ffffff',
+                borderWidth: 2,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '75%',
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return `${context.label}: ${context.raw.toFixed(2)}%`;
+                        }
+                    }
+                }
+            },
+            animation: {
+                animateRotate: true,
+                duration: 1200
+            }
+        }
+    });
+});
+</script>
+
 
 
                             <!-- Botón -->
@@ -706,6 +729,45 @@ document.addEventListener("DOMContentLoaded", function () {
                     plugins: { legend: { display: false } },
                     responsive: false,
                     maintainAspectRatio: false
+                }
+            });
+        })();
+        {% endfor %}
+    {% endfor %}
+});
+document.addEventListener("DOMContentLoaded", function () {
+    {% for nivel in niveles %}
+        {% for e in nivel.espacios %}
+        (function() {
+            var canvas = document.getElementById('avance-chart-{{ e.id }}');
+            if (!canvas) return;
+            var ctx = canvas.getContext('2d');
+            var avanceRaw = "{{ e.avance|default_if_none:'0'|floatformat:2 }}";
+            var avance = parseFloat(avanceRaw.replace(',', '.'));
+            if (isNaN(avance)) avance = 0;
+            var restante = 100 - avance;
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Avance', 'Restante'],
+                    datasets: [{
+                        data: [avance, restante],
+                        backgroundColor: [
+                            'rgba(13, 110, 253, 0.85)', // azul
+                            'rgba(233, 236, 239, 0.6)'  // gris claro
+                        ],
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    cutout: '70%',
+                    plugins: { legend: { display: false } },
+                    responsive: false,
+                    maintainAspectRatio: false,
+                    animation: {
+                        animateRotate: true,
+                        duration: 1000
+                    }
                 }
             });
         })();

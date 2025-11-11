@@ -14,6 +14,10 @@ def home(request):
     return render(request, 'construccion1app/home.html')
 
 
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.views.generic import ListView
+from .models import Proyecto
+
 class MisProyectosViewHome(LoginRequiredMixin, ListView):
     template_name = 'construccion1app/mis_proyectosHome.html'
     context_object_name = 'proyectos'
@@ -38,6 +42,33 @@ class MisProyectosViewHome(LoginRequiredMixin, ListView):
 
         # Si no tiene empresa ni proyectos asignados
         return Proyecto.objects.none()
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        
+        # Agregar datos procesados de cada proyecto
+        proyectos_con_datos = []
+        for proyecto in context['proyectos']:
+            # Calcular el avance total del proyecto
+            avance_total = proyecto.calcular_avance()
+            
+            # Crear un diccionario con los datos del proyecto
+            proyecto_data = {
+                'id': proyecto.id,
+                'nombre': proyecto.nombre,
+                'rubro': proyecto.rubro,
+                'ubicacion': proyecto.ubicacion,
+                'descripcion': proyecto.descripcion,
+                'fecha_inicio': proyecto.fecha_inicio,
+                'fecha_fin': proyecto.fecha_fin,
+                'avance_total': float(avance_total),  # Asegurar que sea float
+            }
+            proyectos_con_datos.append(proyecto_data)
+        
+        # Reemplazar proyectos con los datos procesados
+        context['proyectos_data'] = proyectos_con_datos
+        
+        return context
 
 
 @login_required

@@ -302,7 +302,7 @@ class ModificarActividadForm(forms.ModelForm):
         fields = [             
             'espacio', 'nombre', 'avance', 'incidencia','aprobacion_calidad',       
             'asignado', 'estado_ejecucion', 'estado_asignacion',             
-            'justificacion', 'predecesora', 'sucesora',             
+            'justificacion', 'predecesora', 'sucesora','archivo_justificacion',          
             'fecha_inicio','fecha_fin','habilitada','archivo_informacion',
         ]      
         widgets = {
@@ -327,7 +327,7 @@ class ModificarActividadForm(forms.ModelForm):
             # Ocultar ciertos campos si el usuario es calidad o supervisor_constructor             
             if user.tipo_usuario in ['calidad','supervisor_constructor']:                 
                 campos_ocultos = [                     
-                    'incidencia', 'asignado', 'estado_asignacion','aprobacion_calidad',                     
+                    'incidencia', 'asignado', 'estado_asignacion','aprobacion_calidad',                 
                     'predecesora', 'sucesora', 'fecha_inicio','fecha_fin', 'habilitada'                 
                 ]                 
                 for campo in campos_ocultos:                     

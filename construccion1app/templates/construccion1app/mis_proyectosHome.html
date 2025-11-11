@@ -4,14 +4,11 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h1 class="mb-0">Mis Proyectos</h1>
-    <!-- Botón flotante para agregar proyecto -->
     {% if request.user.is_superuser or request.user.tipo_usuario == 'superadmin_empresa' %}
     <a href="{% url 'agregar_proyecto' %}" class="btn btn-success btn-lg shadow-sm" title="Agregar Proyecto">
         <i class="bi bi-plus-circle"></i>
     </a>
-    
     {% endif %}
-
 </div>
 
 {% if proyectos %}
@@ -37,41 +34,24 @@
                     <p class="card-text text-truncate">{{ proyecto.descripcion }}</p>
                 {% endif %}
 
-
                 <div class="mt-auto">
                     <p class="mb-1"><strong>Inicio:</strong> {{ proyecto.fecha_inicio|date:"d/m/Y" }}</p>
                     <p class="mb-2"><strong>Fin:</strong> {{ proyecto.fecha_fin|date:"d/m/Y" }}</p>
 
-                    
+                    <div class="progress-circle-container text-center mt-3 mb-3">
+                        <canvas id="progress-{{ proyecto.id }}" width="150" height="150"></canvas>
+                    </div>
 
-                    <div class="progress-circle-container text-center mt-2">
-                            <canvas id="progress-{{ proyecto.id }}" width="120" height="120"></canvas>
-
-                        </div>
-                    
-
-
-
-                   <div class="d-flex justify-content-end">
-{% if request.user.is_superuser or request.user.tipo_usuario == 'superadmin_empresa' %}
-    <a href="{% url 'editar_visibilidad' proyecto.id %}" class="btn btn-outline-success btn-sm me-2" title="Ver/Ocultar usuarios">
-        <i class="bi bi-eye"></i>
-    </a>
-    <a href="#" class="btn btn-outline-primary btn-sm me-2" title="Editar">
-        <i class="bi bi-pencil-square"></i>
-    </a>
-    <a href="#" class="btn btn-outline-danger btn-sm me-2" title="Eliminar">
-        <i class="bi bi-trash"></i>
-    </a>
-    <!-- Botón Programación de Obra -->
-    <a href="{% url 'programacion_obra' proyecto.id %}" class="btn btn-outline-warning btn-sm" title="Programación de Obra">
-        <i class="bi bi-calendar-check"></i>
-    </a>
-{% endif %}
-
-
-</div>
-
+                    <div class="d-flex justify-content-end">
+                        {% if request.user.is_superuser or request.user.tipo_usuario == 'superadmin_empresa' %}
+                        <a href="{% url 'editar_visibilidad' proyecto.id %}" class="btn btn-outline-success btn-sm me-2" title="Ver/Ocultar usuarios">
+                            <i class="bi bi-eye"></i>
+                        </a>
+                        <a href="{% url 'programacion_obra' proyecto.id %}" class="btn btn-outline-warning btn-sm" title="Programación de Obra">
+                            <i class="bi bi-calendar-check"></i>
+                        </a>
+                        {% endif %}
+                    </div>
                 </div>
             </div>
         </div>
@@ -88,62 +68,86 @@
     .card:hover { transform: translateY(-5px); box-shadow: 0 8px 20px rgba(0,0,0,0.15); }
     .btn-success i { font-size: 1.5rem; }
     .text-truncate { max-height: 3rem; overflow: hidden; }
+    .progress-circle-container { 
+        display: flex; 
+        justify-content: center; 
+        align-items: center;
+        min-height: 150px;
+    }
+    .progress-circle-container canvas {
+        max-width: 150px;
+        max-height: 150px;
+    }
 </style>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     {% for proyecto in proyectos %}
-    const ctx{{ proyecto.id }} = document.getElementById('progress-{{ proyecto.id }}').getContext('2d');
+    (function() {
+        const canvas = document.getElementById('progress-{{ proyecto.id }}');
+        if (!canvas) return;
+        
+        const ctx = canvas.getContext('2d');
+        const avance = Number({{ proyecto.calcular_avance|stringformat:'.2f' }});
+        const restante = 100 - avance;
 
-    new Chart(ctx{{ proyecto.id }}, {
-        type: 'doughnut',
-        data: {
-            labels: ['Avance', 'Restante'],
-            datasets: [{
-                data: [{{ proyecto.calcular_avance|floatformat:2 }}, 100 - {{ proyecto.calcular_avance|floatformat:2 }}],
-                backgroundColor: ['#0d6efd', '#e9ecef'],
-                borderWidth: 0
-            }]
-        },
-        options: {
-            cutout: '70%',
-            responsive: false,
-            plugins: {
-                legend: { display: false },
-                tooltip: { enabled: false },
-                // Plugin para dibujar el porcentaje en el centro
-                datalabels: false,
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Avance', 'Restante'],
+                datasets: [{
+                    data: [avance, restante],
+                    backgroundColor: ['#0d6efd', '#e9ecef'],
+                    borderWidth: 0,
+                    borderRadius: 0
+                }]
             },
-            animation: {
-                animateRotate: true,
-                animateScale: true,
-            }
-        },
-        plugins: [{
-            id: 'center-text',
-            beforeDraw(chart) {
-                const width = chart.width;
-                const height = chart.height;
-                const ctx = chart.ctx;
-                ctx.restore();
-                const fontSize = (height / 5).toFixed(2);
-                ctx.font = fontSize + "px sans-serif";
-                ctx.textBaseline = "middle";
-                ctx.fillStyle = "#000";
-                const text = "{{ proyecto.calcular_avance|floatformat:2 }}%";
-                
-                const textX = Math.round((width - ctx.measureText(text).width) / 2);
-                const textY = height / 2;
-                ctx.fillText(text, textX, textY);
-                ctx.save();
-            }
-        }]
-    });
+            options: {
+                cutout: '75%',
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { 
+                        enabled: true,
+                        callbacks: {
+                            label: function(context) {
+                                return context.label + ': ' + context.parsed.toFixed(2) + '%';
+                            }
+                        }
+                    }
+                },
+                animation: {
+                    animateRotate: true,
+                    animateScale: false
+                }
+            },
+            plugins: [{
+                id: 'centerText',
+                beforeDraw: function(chart) {
+                    const width = chart.width;
+                    const height = chart.height;
+                    const ctx = chart.ctx;
+                    
+                    ctx.save();
+                    const fontSize = Math.floor(height / 6);
+                    ctx.font = 'bold ' + fontSize + 'px Arial, sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillStyle = '#000';
+                    
+                    const text = avance.toFixed(2) + '%';
+                    const textX = width / 2;
+                    const textY = height / 2;
+                    
+                    ctx.fillText(text, textX, textY);
+                    ctx.restore();
+                }
+            }]
+        });
+    })();
     {% endfor %}
 });
 </script>
-    
 
 {% endblock %}
-
-
-
