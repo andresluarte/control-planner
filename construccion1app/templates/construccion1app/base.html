@@ -148,63 +148,82 @@
     {% block js %}{% endblock %}
 
 <script>
-    // Usar exactamente el nombre que envías desde views.py
-    const vapidKey = "{{ VAPID_PUBLIC_KEY|safe }}";
+// Configuración VAPID
+const vapidKey = "{{ VAPID_PUBLIC_KEY|safe }}";
 
-</script>
-
-<script>
-if ('serviceWorker' in navigator && 'PushManager' in window) {
-    navigator.serviceWorker.register("{% static 'serviceworker.js' %}", { scope: '/' })
-        .then(function(registration) {
-            console.log('✅ ServiceWorker registrado con éxito:', registration);
-
-            const vapidKey = "{{ VAPID_PUBLIC_KEY|safe }}";
-            if (!vapidKey) {
-                console.error('VAPID_PUBLIC_KEY no está definida');
-                return;
-            }
-
-            registration.pushManager.getSubscription().then(function(subscription) {
-                if (subscription) {
-                    console.log('Ya existe suscripción:', subscription);
-                    return subscription;
-                }
-
-                return registration.pushManager.subscribe({
-                    userVisibleOnly: true,
-                    applicationServerKey: urlBase64ToUint8Array(vapidKey)
-                });
-            }).then(function(newSubscription) {
-                if (!newSubscription) return;
-
-                console.log('Suscripción exitosa:', newSubscription);
-
-                fetch("{% url 'suscribir_notificaciones' %}", {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': '{{ csrf_token }}'
-                    },
-                    body: JSON.stringify(newSubscription)
-                })
-                .then(resp => resp.json())
-                .then(data => console.log('Respuesta backend:', data))
-                .catch(err => console.error('Error guardando suscripción:', err));
-            }).catch(function(err) {
-                console.error('Error en suscripción:', err);
-            });
-        })
-        .catch(function(error) {
-            console.error('🚨 Error registrando ServiceWorker:', error);
-        });
-}
-
+// Función helper
 function urlBase64ToUint8Array(base64String) {
     const padding = '='.repeat((4 - base64String.length % 4) % 4);
     const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
     const rawData = window.atob(base64);
     return new Uint8Array([...rawData].map(char => char.charCodeAt(0)));
+}
+
+// Registro del Service Worker
+if ('serviceWorker' in navigator && 'PushManager' in window) {
+    window.addEventListener('load', function() {
+        navigator.serviceWorker.register('/static/serviceworker.js', { 
+            scope: '/' 
+        })
+        .then(function(registration) {
+            console.log('✅ ServiceWorker registrado:', registration.scope);
+            
+            // Esperar a que el SW esté activo
+            return navigator.serviceWorker.ready;
+        })
+        .then(function(registration) {
+            console.log('✅ ServiceWorker listo');
+            
+            if (!vapidKey) {
+                console.error('❌ VAPID_PUBLIC_KEY no definida');
+                return;
+            }
+            
+            // Verificar suscripción existente
+            return registration.pushManager.getSubscription()
+                .then(function(subscription) {
+                    if (subscription) {
+                        console.log('✅ Ya existe suscripción');
+                        return subscription;
+                    }
+                    
+                    // Crear nueva suscripción
+                    console.log('📝 Creando nueva suscripción...');
+                    return registration.pushManager.subscribe({
+                        userVisibleOnly: true,
+                        applicationServerKey: urlBase64ToUint8Array(vapidKey)
+                    });
+                });
+        })
+        .then(function(subscription) {
+            if (!subscription) return;
+            
+            console.log('📤 Enviando suscripción al servidor...');
+            
+            // Enviar al backend
+            return fetch("{% url 'suscribir_notificaciones' %}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify(subscription)
+            });
+        })
+        .then(function(response) {
+            if (response) {
+                return response.json();
+            }
+        })
+        .then(function(data) {
+            if (data) {
+                console.log('✅ Suscripción guardada:', data);
+            }
+        })
+        .catch(function(error) {
+            console.error('🚨 Error en PWA:', error);
+        });
+    });
 }
 </script>
 
