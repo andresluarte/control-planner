@@ -1,10 +1,10 @@
 self.addEventListener('push', function(event) {
-    const data = event.data.json();
-    const title = data.head || "Notificación";
+    const data = event.data ? event.data.json() : {};
+    const title = data.title || "Nueva notificación";
     const options = {
-        body: data.body || "",
-        icon: "/static/construccion1app/img/logo2.jpeg",
-        data: data.url || "/"
+        body: data.body || "Tienes una nueva notificación",
+        icon: '/static/img/icon.png', // opcional
+        badge: '/static/img/badge.png' // opcional
     };
     event.waitUntil(
         self.registration.showNotification(title, options)
@@ -13,8 +13,7 @@ self.addEventListener('push', function(event) {
 
 self.addEventListener('notificationclick', function(event) {
     event.notification.close();
-    const url = event.notification.data;
     event.waitUntil(
-        clients.openWindow(url)
+        clients.openWindow('/')
     );
 });
