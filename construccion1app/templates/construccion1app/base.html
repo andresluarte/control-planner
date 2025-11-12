@@ -155,21 +155,21 @@
 
 <script>
 if ('serviceWorker' in navigator && 'PushManager' in window) {
-    navigator.serviceWorker.register("{% static 'serviceworker.js' %}", { scope: '/' })
+    // 🔧 Cambia la ruta al Service Worker correcto
+    navigator.serviceWorker.register("{% static 'construccion1app/js/serviceworker.js' %}", { scope: '/' })
         .then(function(registration) {
-            console.log('ServiceWorker registrado:', registration);
+            console.log('✅ ServiceWorker registrado correctamente:', registration);
 
-            // Asegúrate de tener la clave VAPID en tu contexto
             const vapidKey = "{{ VAPID_PUBLIC_KEY|safe }}";
             if (!vapidKey) {
-                console.error('VAPID_PUBLIC_KEY no está definida');
+                console.error('❌ VAPID_PUBLIC_KEY no está definida');
                 return;
             }
 
             // Verificar si ya hay suscripción
             registration.pushManager.getSubscription().then(function(subscription) {
                 if (subscription) {
-                    console.log('Ya existe suscripción:', subscription);
+                    console.log('🔔 Ya existe suscripción:', subscription);
                     return subscription;
                 }
 
@@ -181,7 +181,7 @@ if ('serviceWorker' in navigator && 'PushManager' in window) {
             }).then(function(newSubscription) {
                 if (!newSubscription) return;
 
-                console.log('Suscripción exitosa:', newSubscription);
+                console.log('🎉 Suscripción exitosa:', newSubscription);
 
                 // Enviar al backend
                 fetch("{% url 'suscribir_notificaciones' %}", {
@@ -193,14 +193,14 @@ if ('serviceWorker' in navigator && 'PushManager' in window) {
                     body: JSON.stringify(newSubscription)
                 })
                 .then(resp => resp.json())
-                .then(data => console.log('Respuesta backend:', data))
-                .catch(err => console.error('Error guardando suscripción:', err));
+                .then(data => console.log('💾 Respuesta backend:', data))
+                .catch(err => console.error('⚠️ Error guardando suscripción:', err));
             }).catch(function(err) {
-                console.error('Error en suscripción:', err);
+                console.error('🚫 Error en suscripción:', err);
             });
         })
         .catch(function(error) {
-            console.error('Error registrando ServiceWorker:', error);
+            console.error('🚨 Error registrando ServiceWorker:', error);
         });
 }
 
@@ -214,6 +214,7 @@ function urlBase64ToUint8Array(base64String) {
     return new Uint8Array([...rawData].map(char => char.charCodeAt(0)));
 }
 </script>
+
 
 
 
