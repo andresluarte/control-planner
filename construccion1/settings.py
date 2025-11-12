@@ -125,7 +125,7 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 LANGUAGE_CODE = 'es-es'
 USE_I18N = True
-PWA_SERVICE_WORKER_PATH = os.path.join(BASE_DIR, 'construccion1app/static/construccion1app/js/serviceworker.js')
+PWA_SERVICE_WORKER_PATH = os.path.join(BASE_DIR, 'static/serviceworker.js')
 
 
 CSRF_TRUSTED_ORIGINS = [
