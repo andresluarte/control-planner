@@ -5,7 +5,7 @@ Django settings for construccion1 project.
 from pathlib import Path
 import os 
 import dj_database_url
-#DEBUG = True
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -13,7 +13,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-+bfs32#558dz+8^9@pjjc78j@t(c9ug@r6cnzx5qn%ab5^5*7@')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-
+DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
 # Hosts permitidos
 ALLOWED_HOSTS = ['.herokuapp.com', 'localhost', '127.0.0.1']
@@ -34,15 +34,7 @@ INSTALLED_APPS = [
     'crispy_forms',
     'crispy_bootstrap5',
     'construccion1app.apps.Construccion1AppConfig', 
-  
 ]
-
-# Configuración de WebPush
-WEBPUSH_SETTINGS = {
-    "VAPID_PUBLIC_KEY": "BN8Mo7Z1c2CBELfxGgDE0jq77ZQmsF5fBPYoNtUv1ETI23MJsUx-fqTghB_CoYbMvODzrzl2DYm9832ADljoKOU",
-    "VAPID_PRIVATE_KEY": "rui2WBK3SzmAEA7FmJXf3FdtgjM4Vno2XOCV87xaRHI",
-    "VAPID_ADMIN_EMAIL": "andres.luarte@luartech.cl"
-}
 
 # Middleware
 MIDDLEWARE = [
@@ -74,8 +66,6 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'construccion1app.context_processors.notificaciones_context',
-                'construccion1app.context_processors.webpush_settings',
-                'construccion1app.context_processors.webpush_vapid',
             ],
         },
     },
@@ -124,14 +114,14 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 LANGUAGE_CODE = 'es-es'
 USE_I18N = True
-PWA_SERVICE_WORKER_PATH = os.path.join(BASE_DIR, 'static/serviceworker.js')
 
-
+# CSRF
 CSRF_TRUSTED_ORIGINS = [
     'https://control-plannner-4c7ab22173ea.herokuapp.com',
     'https://*.herokuapp.com',
 ]
 
+# Static files
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
@@ -149,25 +139,3 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 X_FRAME_OPTIONS = 'SAMEORIGIN'
-
-# Progressive Web App (PWA)
-PWA_APP_NAME = 'ConstruApp'
-PWA_APP_DESCRIPTION = "Control Planner para obras"
-PWA_APP_THEME_COLOR = '#0a1f44'
-PWA_APP_BACKGROUND_COLOR = '#ffffff'
-PWA_APP_DISPLAY = 'standalone'
-PWA_APP_SCOPE = '/'
-PWA_APP_ORIENTATION = 'portrait'
-PWA_APP_START_URL = '/'
-PWA_APP_STATUS_BAR_COLOR = 'default'
-PWA_APP_ICONS = [
-    {'src': '/static/construccion1app/img/logo2.jpeg', 'sizes': '512x512'}
-]
-PWA_APP_ICONS_APPLE = [
-    {'src': '/static/construccion1app/img/logo2.jpeg', 'sizes': '512x512'}
-]
-PWA_APP_SPLASH_SCREEN = [
-    {'src': '/static/construccion1app/img/logo2.jpeg', 'media': '(prefers-color-scheme: light)'}
-]
-PWA_APP_DIR = 'ltr'
-PWA_APP_LANG = 'es-ES'
