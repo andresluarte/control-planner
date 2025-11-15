@@ -9,6 +9,8 @@ from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
 from .forms import AgregarUsuarioForm,LoginForm
 
+from django.http import JsonResponse, HttpResponse
+import json
 # Create your views here.
 def home(request):
     return render(request, 'construccion1app/home.html')
@@ -357,7 +359,7 @@ def agregar_nivel(request, proyecto_id):
         return render(request, "construccion1app/dashboard_proyecto.html", {"form": form, "proyecto": proyecto})
     
 
-from django.http import JsonResponse
+
 
 def sumar_incidencias(request, proyecto_id):
     proyecto = get_object_or_404(Proyecto, id=proyecto_id)
@@ -454,7 +456,7 @@ def agregar_actividad(request, espacio_id):
         'user': request.user,  # Pasar user al template
     })
 
-from django.http import JsonResponse
+
 
 @login_required
 def mapa_actividades(request, espacio_id):
@@ -621,7 +623,7 @@ def lista_notificaciones(request):
 
 
 
-from django.http import JsonResponse
+
 from django.db.models import Sum
 from .models import Actividad
 
@@ -1020,12 +1022,11 @@ def exportar_actividades_excel(request, proyecto_id):
 
 
 from django.contrib.auth.decorators import login_required
-from django.http import JsonResponse
+
 from django.views.decorators.http import require_POST
 
 
 # views.py
-import json
 
 
 
@@ -1120,7 +1121,7 @@ def save_fcm_token(request):
 
 
 
-from django.http import JsonResponse
+
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_http_methods
 import firebase_admin
