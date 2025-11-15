@@ -1,0 +1,33 @@
+### 3.3 Agregar estas líneas al archivo
+```
+# Credenciales y archivos sensibles
+credentials/
+firebase-key.json
+*.json
+
+# Variables de entorno
+.env
+.env.local
+.env.production
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+
+# Django
+*.log
+db.sqlite3
+db.sqlite3-journal
+staticfiles/
+media/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
