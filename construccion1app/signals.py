@@ -6,20 +6,36 @@ from django.conf import settings
 import firebase_admin
 from firebase_admin import credentials, messaging
 import os
+import json
 
 # Inicializar Firebase Admin SDK (solo una vez)
 if not firebase_admin._apps:
     try:
-        cred_path = os.path.join(settings.BASE_DIR, 'credentials', 'firebase-key.json')
+        # Intentar primero desde variable de entorno (PRODUCCIÓN)
+        firebase_credentials = os.environ.get('FIREBASE_CREDENTIALS')
         
-        if not os.path.exists(cred_path):
-            print(f"⚠️ No se encontró el archivo de credenciales en: {cred_path}")
-        else:
-            cred = credentials.Certificate(cred_path)
+        if firebase_credentials:
+            print("🔐 Usando credenciales desde variable de entorno")
+            cred_dict = json.loads(firebase_credentials)
+            cred = credentials.Certificate(cred_dict)
             firebase_admin.initialize_app(cred)
-            print("✅ Firebase Admin SDK inicializado correctamente")
+            print("✅ Firebase inicializado desde variable de entorno")
+        else:
+            # Si no hay variable de entorno, usar archivo local (DESARROLLO)
+            cred_path = os.path.join(settings.BASE_DIR, 'credentials', 'firebase-key.json')
+            
+            if os.path.exists(cred_path):
+                print("📁 Usando credenciales desde archivo local")
+                cred = credentials.Certificate(cred_path)
+                firebase_admin.initialize_app(cred)
+                print("✅ Firebase inicializado desde archivo local")
+            else:
+                print("⚠️ No se encontraron credenciales de Firebase")
+                
     except Exception as e:
         print(f"❌ Error al inicializar Firebase: {e}")
+        import traceback
+        traceback.print_exc()
 
 
 def enviar_notificacion_push(titulo, mensaje_texto, token, url=None):
@@ -79,6 +95,7 @@ def enviar_notificacion_push(titulo, mensaje_texto, token, url=None):
         import traceback
         traceback.print_exc()
         return None
+
 
 # -----------------------------
 #  GUARDAR ASIGNACIÓN ANTERIOR
