@@ -62,9 +62,11 @@ class Usuario(AbstractUser):
         blank=True,
         related_name="usuarios"
     )
-
+    fcm_token = models.TextField(blank=True, null=True)
+    
     def __str__(self):
         return f"{self.username} - {self.get_tipo_usuario_display()}"
+    
 class Proyecto(models.Model):
     RUBRO_CHOICES = [
         ("vivienda", "Vivienda"),
@@ -286,6 +288,7 @@ class Actividad(models.Model):
         default=False,
         help_text="Indica si la actividad requiere información adicional"
     )
+    
     archivo_informacion = models.FileField(
         upload_to="actividades/informacion_adicional/",
         null=True,

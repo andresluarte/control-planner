@@ -199,6 +199,7 @@ class ActividadForm(forms.ModelForm):
         if espacio:
             self.fields['espacio'].initial = espacio
             self.fields['espacio'].disabled = True  # No permitir cambiar el espacio
+    
 
     def clean_incidencia(self):         
         incidencia = self.cleaned_data.get("incidencia", 0)         
@@ -223,6 +224,15 @@ class ActividadForm(forms.ModelForm):
                     f"Tu actividad debería tener {restante}% para llegar a 100%."                 
                 )         
         return incidencia
+    def clean_archivo_informacion(self):
+        archivo = self.cleaned_data.get('archivo_informacion')
+        if archivo:
+            if not archivo.name.lower().endswith('.pdf'):
+                raise forms.ValidationError('Solo se permiten archivos PDF.')
+            # Opcional: validar tamaño (ej: máximo 10MB)
+            if archivo.size > 10 * 1024 * 1024:
+                raise forms.ValidationError('El archivo no puede superar 10MB.')
+        return archivo
     
     def save(self, commit=True):
         """Sobrescribir save para manejar la lógica de predecesora-sucesora"""
@@ -359,7 +369,17 @@ class ModificarActividadForm(forms.ModelForm):
                     id=self.instance.id                 
                 )                 
                 self.fields['predecesora'].queryset = mismo_espacio                 
-                self.fields['sucesora'].queryset = mismo_espacio      
+                self.fields['sucesora'].queryset = mismo_espacio     
+                 
+    def clean_archivo_informacion(self):
+        archivo = self.cleaned_data.get('archivo_informacion')
+        if archivo:
+            if not archivo.name.lower().endswith('.pdf'):
+                raise forms.ValidationError('Solo se permiten archivos PDF.')
+            # Opcional: validar tamaño (ej: máximo 10MB)
+            if archivo.size > 10 * 1024 * 1024:
+                raise forms.ValidationError('El archivo no puede superar 10MB.')
+        return archivo
                 
     def clean_incidencia(self):         
         incidencia = self.cleaned_data.get("incidencia", 0)         

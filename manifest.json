@@ -1,0 +1,26 @@
+{
+  "name": "Control Planner",
+  "short_name": "ConstruApp",
+  "description": "Sistema de gestión de construcción",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#000080",
+  "theme_color": "#000080",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/static/construccion1app/img/logo2.jpeg",
+      "sizes": "192x192",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/static/construccion1app/img/logo2.jpeg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["productivity", "business"]
+}

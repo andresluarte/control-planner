@@ -1022,26 +1022,12 @@ def exportar_actividades_excel(request, proyecto_id):
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
-from webpush.models import PushInformation
+
 
 # views.py
 import json
 
-@login_required
-@require_POST
-def suscribir_notificaciones(request):
-    """
-    Guarda la suscripción del usuario en la base de datos
-    """
-    try:
-        subscription_data = json.loads(request.body)
-        PushInformation.objects.update_or_create(
-            user=request.user,
-            defaults={'subscription_info': subscription_data}
-        )
-        return JsonResponse({"message": "Suscripción exitosa"})
-    except Exception as e:
-        return JsonResponse({"error": str(e)}, status=400)
+
 
 
 # views.py
@@ -1058,3 +1044,206 @@ def base_view(request):
         'VAPID_PUBLIC_KEY': settings.WEBPUSH_SETTINGS['VAPID_PUBLIC_KEY']
     }
     return render(request, 'construccion1app/base.html', context)
+
+
+@login_required
+@csrf_exempt
+def save_fcm_token(request):
+    """
+    Guarda el token FCM del usuario en la base de datos
+    """
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            token = data.get('token')
+            
+            print(f"🔍 Usuario actual: {request.user.email}")
+            print(f"🔍 Token anterior: {request.user.fcm_token[:50] if request.user.fcm_token else 'NINGUNO'}...")
+            print(f"🔍 Token nuevo: {token[:50]}..." if token else "❌ Token vacío")
+            
+            if token:
+                # VERIFICAR: Si el token es el mismo, no hacer nada
+                if request.user.fcm_token == token:
+                    print(f"ℹ️ Token sin cambios para {request.user.email}")
+                    return JsonResponse({
+                        'status': 'success', 
+                        'message': 'Token ya estaba guardado',
+                        'user': request.user.email
+                    })
+                
+                # REEMPLAZAR el token (no concatenar)
+                request.user.fcm_token = token
+                request.user.save(update_fields=['fcm_token'])
+                
+                # Verificar que se guardó correctamente
+                request.user.refresh_from_db()
+                token_guardado = request.user.fcm_token
+                
+                print(f"✅ Token REEMPLAZADO para {request.user.email}")
+                print(f"✅ Token guardado: {token_guardado[:50]}...")
+                
+                # Validar que el token guardado es correcto
+                if token_guardado != token:
+                    print(f"⚠️ ADVERTENCIA: Token guardado no coincide!")
+                    return JsonResponse({
+                        'status': 'error',
+                        'message': 'Error al guardar token'
+                    }, status=500)
+                
+                return JsonResponse({
+                    'status': 'success', 
+                    'message': 'Token guardado correctamente',
+                    'user': request.user.email,
+                    'token_length': len(token)
+                })
+            else:
+                print("❌ Token no proporcionado en la solicitud")
+                return JsonResponse({
+                    'status': 'error', 
+                    'message': 'Token no proporcionado'
+                }, status=400)
+                
+        except Exception as e:
+            print(f"❌ Error al guardar token FCM: {e}")
+            import traceback
+            traceback.print_exc()
+            return JsonResponse({
+                'status': 'error', 
+                'message': str(e)
+            }, status=500)
+    
+    return JsonResponse({
+        'status': 'error', 
+        'message': 'Método no permitido'
+    }, status=405)
+
+
+
+
+from django.http import JsonResponse
+from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_http_methods
+import firebase_admin
+from firebase_admin import messaging
+
+@login_required
+@require_http_methods(["GET"])
+def test_notification(request):
+    """Vista temporal para probar notificaciones push"""
+    try:
+        # 1. Verificar que Firebase está inicializado
+        if not firebase_admin._apps:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Firebase no está inicializado. Verifica firebase-key.json'
+            }, status=500)
+        
+        # 2. Verificar usuario autenticado
+        if not request.user.is_authenticated:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Usuario no autenticado'
+            }, status=401)
+        
+        # 3. Verificar token existe
+        token = getattr(request.user, 'fcm_token', None)
+        
+        print(f"🔍 Usuario: {request.user.email}")
+        print(f"🔍 Tiene atributo fcm_token: {hasattr(request.user, 'fcm_token')}")
+        print(f"🔍 Token: {token[:50] if token else 'NINGUNO'}...")
+        
+        if not token:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'No hay token FCM guardado para este usuario',
+                'suggestion': 'Recarga la página para generar un nuevo token',
+                'user': request.user.email
+            }, status=400)
+        
+        # 4. Verificar que el token no esté vacío o corrupto
+        if len(token) < 100:  # Los tokens FCM son largos
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Token FCM parece inválido o corrupto',
+                'token_length': len(token),
+                'suggestion': 'Borra el token y recarga la página'
+            }, status=400)
+        
+        # 5. Intentar enviar notificación
+        print(f"📤 Intentando enviar notificación...")
+        
+        message = messaging.Message(
+            notification=messaging.Notification(
+                title="🧪 Prueba de Notificación",
+                body=f"Hola {request.user.first_name or request.user.email}, las notificaciones funcionan!"
+            ),
+            token=token,
+            webpush=messaging.WebpushConfig(
+                notification=messaging.WebpushNotification(
+                    icon="/static/construccion1app/img/logo2.jpeg",
+                    badge="/static/construccion1app/img/logo2.jpeg",
+                    vibrate=[200, 100, 200]
+                )
+            )
+        )
+        
+        response = messaging.send(message)
+        
+        print(f"✅ Notificación enviada exitosamente")
+        print(f"✅ Response ID: {response}")
+        
+        return JsonResponse({
+            'status': 'success',
+            'message': 'Notificación enviada correctamente',
+            'response_id': response,
+            'user': request.user.email
+        })
+        
+    except messaging.UnregisteredError as e:
+        print(f"❌ Token no registrado o expirado: {e}")
+        return JsonResponse({
+            'status': 'error',
+            'message': 'Token FCM inválido o expirado',
+            'suggestion': 'Recarga la página para generar un nuevo token',
+            'error_type': 'UnregisteredError'
+        }, status=400)
+        
+    except messaging.InvalidArgumentError as e:
+        print(f"❌ Argumento inválido: {e}")
+        return JsonResponse({
+            'status': 'error',
+            'message': 'Error en los datos de la notificación',
+            'error': str(e),
+            'error_type': 'InvalidArgumentError'
+        }, status=400)
+        
+    except Exception as e:
+        print(f"❌ Error inesperado:")
+        import traceback
+        traceback.print_exc()
+        
+        return JsonResponse({
+            'status': 'error',
+            'message': f'Error al enviar notificación: {str(e)}',
+            'error_type': type(e).__name__,
+            'suggestion': 'Revisa los logs del servidor'
+        }, status=500)
+    
+@login_required
+def diagnostico_firebase(request):
+    """Vista para diagnosticar problemas de Firebase"""
+    import os
+    from django.conf import settings
+    
+    diagnostico = {
+        'firebase_initialized': len(firebase_admin._apps) > 0,
+        'credentials_path': os.path.join(settings.BASE_DIR, 'credentials', 'firebase-key.json'),
+        'credentials_exist': os.path.exists(os.path.join(settings.BASE_DIR, 'credentials', 'firebase-key.json')),
+        'user_authenticated': request.user.is_authenticated,
+        'user_email': request.user.email if request.user.is_authenticated else None,
+        'has_fcm_token_field': hasattr(request.user, 'fcm_token'),
+        'fcm_token_length': len(request.user.fcm_token) if hasattr(request.user, 'fcm_token') and request.user.fcm_token else 0,
+        'fcm_token_preview': request.user.fcm_token[:50] if hasattr(request.user, 'fcm_token') and request.user.fcm_token else 'NINGUNO'
+    }
+    
+    return JsonResponse(diagnostico, json_dumps_params={'indent': 2})
