@@ -7,31 +7,39 @@ import firebase_admin
 from firebase_admin import credentials, messaging
 import os
 import json
+import base64
 
-# Inicializar Firebase Admin SDK (solo una vez)
+# Inicializar Firebase Admin SDK solo una vez
 if not firebase_admin._apps:
     try:
-        # Intentar primero desde variable de entorno (PRODUCCIÓN)
-        firebase_credentials = os.environ.get('FIREBASE_CREDENTIALS')
-        
-        if firebase_credentials:
-            print("🔐 Usando credenciales desde variable de entorno")
-            cred_dict = json.loads(firebase_credentials)
+        firebase_env = os.environ.get("FIREBASE_CREDENTIALS")
+
+        if firebase_env:
+            print("🔐 Usando credenciales desde variable de entorno (base64)")
+
+            # 🔥 Decodificar el base64 que enviaste a Heroku
+            decoded_bytes = base64.b64decode(firebase_env)
+            cred_dict = json.loads(decoded_bytes)
+
             cred = credentials.Certificate(cred_dict)
             firebase_admin.initialize_app(cred)
+
             print("✅ Firebase inicializado desde variable de entorno")
+        
         else:
-            # Si no hay variable de entorno, usar archivo local (DESARROLLO)
-            cred_path = os.path.join(settings.BASE_DIR, 'credentials', 'firebase-key.json')
-            
+            # ---------- DESARROLLO LOCAL ----------
+            cred_path = os.path.join(settings.BASE_DIR, "credentials", "firebase-key.json")
+
             if os.path.exists(cred_path):
                 print("📁 Usando credenciales desde archivo local")
+
                 cred = credentials.Certificate(cred_path)
                 firebase_admin.initialize_app(cred)
+
                 print("✅ Firebase inicializado desde archivo local")
             else:
-                print("⚠️ No se encontraron credenciales de Firebase")
-                
+                print("⚠️ No se encontraron credenciales de Firebase en ninguna fuente")
+
     except Exception as e:
         print(f"❌ Error al inicializar Firebase: {e}")
         import traceback
