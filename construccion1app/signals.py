@@ -138,7 +138,8 @@ def crear_notificacion_asignacion(sender, instance, created, **kwargs):
     # Caso 1: Actividad recién creada con asignado
     if created and instance.asignado:
         print(f"   ✅ Caso 1: Actividad nueva con asignado")
-        link = reverse('modificar_actividad', args=[instance.id])
+        link_rel = reverse('modificar_actividad', args=[instance.id])
+        link = f"https://{settings.ALLOWED_HOSTS[0]}{link_rel}"
         mensaje = f"Se te ha asignado la actividad: {instance.nombre} en el espacio {instance.espacio.nombre} del nivel {instance.espacio.nivel.nombre} del proyecto {instance.espacio.nivel.proyecto.nombre}"
 
         # Crear notificación en BD
@@ -163,7 +164,9 @@ def crear_notificacion_asignacion(sender, instance, created, **kwargs):
         asignado_anterior = getattr(instance, '_asignado_anterior', None)
         if asignado_anterior is None and instance.asignado is not None:
             print(f"   ✅ Caso 2: Actividad existente ahora tiene asignado")
-            link = reverse('modificar_actividad', args=[instance.id])
+            
+            link_rel = reverse('modificar_actividad', args=[instance.id])
+            link = f"https://{settings.ALLOWED_HOSTS[0]}{link_rel}"
             mensaje = f"Se te ha asignado la actividad: {instance.nombre} en el espacio {instance.espacio.nombre} del nivel {instance.espacio.nivel.nombre} del proyecto {instance.espacio.nivel.proyecto.nombre}"
 
             # Crear notificación en BD
