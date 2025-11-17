@@ -13,33 +13,22 @@ import base64
 if not firebase_admin._apps:
     try:
         firebase_env = os.environ.get("FIREBASE_CREDENTIALS")
-
         if firebase_env:
             print("🔐 Usando credenciales desde variable de entorno (base64)")
-
-            # 🔥 Decodificar el base64 que enviaste a Heroku
             decoded_bytes = base64.b64decode(firebase_env)
             cred_dict = json.loads(decoded_bytes)
-
             cred = credentials.Certificate(cred_dict)
             firebase_admin.initialize_app(cred)
-
             print("✅ Firebase inicializado desde variable de entorno")
-        
         else:
-            # ---------- DESARROLLO LOCAL ----------
             cred_path = os.path.join(settings.BASE_DIR, "credentials", "firebase-key.json")
-
             if os.path.exists(cred_path):
                 print("📁 Usando credenciales desde archivo local")
-
                 cred = credentials.Certificate(cred_path)
                 firebase_admin.initialize_app(cred)
-
                 print("✅ Firebase inicializado desde archivo local")
             else:
                 print("⚠️ No se encontraron credenciales de Firebase en ninguna fuente")
-
     except Exception as e:
         print(f"❌ Error al inicializar Firebase: {e}")
         import traceback
@@ -47,18 +36,14 @@ if not firebase_admin._apps:
 
 
 def enviar_notificacion_push(titulo, mensaje_texto, token, url=None):
-    """
-    Envía una notificación push usando Firebase Cloud Messaging HTTP v1
-    """
+    """Envía una notificación push usando Firebase Cloud Messaging HTTP v1"""
     print(f"🔔 INTENTANDO ENVIAR NOTIFICACIÓN")
-    print(f"   Título: {titulo}")
-    print(f"   Mensaje: {mensaje_texto}")
-    print(f"   Token: {token[:30] if token else 'NINGUNO'}...")
-    print(f"   URL: {url}")
-    print(f"   DEBUG mode: {settings.DEBUG}")
+    print(f" Título: {titulo}")
+    print(f" Mensaje: {mensaje_texto}")
+    print(f" Token: {token[:30] if token else 'NINGUNO'}...")
+    print(f" URL: {url}")
     
     try:
-        # Configuración base del webpush
         webpush_config = messaging.WebpushConfig(
             notification=messaging.WebpushNotification(
                 icon="/static/construccion1app/img/logo2.jpeg",
@@ -67,15 +52,9 @@ def enviar_notificacion_push(titulo, mensaje_texto, token, url=None):
             )
         )
         
-        # SOLO agregar link si estamos en producción (NO DEBUG)
-        if settings.DEBUG:
-            # En desarrollo local, NO enviamos link
-            print(f"   ℹ️ Modo desarrollo: Link omitido para evitar error HTTPS")
-        else:
-            # En producción con HTTPS, SÍ enviamos link
-            if url:
-                webpush_config.fcm_options = messaging.WebpushFCMOptions(link=url)
-                print(f"   ✅ Link agregado (producción): {url}")
+        if not settings.DEBUG and url:
+            webpush_config.fcm_options = messaging.WebpushFCMOptions(link=url)
+            print(f" ✅ Link agregado (producción): {url}")
         
         message = messaging.Message(
             notification=messaging.Notification(
@@ -105,238 +84,306 @@ def enviar_notificacion_push(titulo, mensaje_texto, token, url=None):
         return None
 
 
-# -----------------------------
-#  GUARDAR ASIGNACIÓN ANTERIOR
-# -----------------------------
+# ----------------------------- 
+# PRE_SAVE: GUARDAR ESTADO ANTERIOR
+# ----------------------------- 
 @receiver(pre_save, sender=Actividad)
-def guardar_asignado_anterior(sender, instance, **kwargs):
+def guardar_estado_anterior(sender, instance, **kwargs):
+    """Guarda el estado anterior de la actividad para detectar cambios"""
     if instance.pk:
         try:
             anterior = Actividad.objects.get(pk=instance.pk)
             instance._asignado_anterior = anterior.asignado
+            instance._avance_anterior = anterior.avance
+            instance._estado_anterior = anterior.estado_ejecucion
+            instance._asignacion_anterior = anterior.estado_asignacion
         except Actividad.DoesNotExist:
             instance._asignado_anterior = None
+            instance._avance_anterior = None
+            instance._estado_anterior = None
+            instance._asignacion_anterior = None
     else:
         instance._asignado_anterior = None
+        instance._avance_anterior = None
+        instance._estado_anterior = None
+        instance._asignacion_anterior = None
 
 
-# -----------------------------
-#  ACTIVIDAD ASIGNADA
-# -----------------------------
+# ----------------------------- 
+# POST_SAVE: LÓGICA UNIFICADA DE NOTIFICACIONES
+# ----------------------------- 
 @receiver(post_save, sender=Actividad)
-def crear_notificacion_asignacion(sender, instance, created, **kwargs):
+def notificacion_actividad_unificada(sender, instance, created, **kwargs):
     """
-    Notifica cuando se asigna una actividad a un usuario
+    Signal unificado que maneja TODAS las notificaciones de actividades
+    Mensajes detallados con información completa de la actividad
     """
     print(f"\n{'='*60}")
-    print(f"🔔 SIGNAL: crear_notificacion_asignacion")
-    print(f"   Created: {created}")
-    print(f"   Actividad: {instance.nombre}")
-    print(f"   Asignado: {instance.asignado}")
-    print(f"   Asignado anterior: {getattr(instance, '_asignado_anterior', None)}")
+    print(f"🔔 SIGNAL UNIFICADO: notificacion_actividad_unificada")
+    print(f" Created: {created}")
+    print(f" Actividad: {instance.nombre}")
+    print(f" Asignado: {instance.asignado}")
     
-    # Caso 1: Actividad recién creada con asignado
-    if created and instance.asignado:
-        print(f"   ✅ Caso 1: Actividad nueva con asignado")
+    # Recuperar estados anteriores
+    asignado_anterior = getattr(instance, '_asignado_anterior', None)
+    avance_anterior = getattr(instance, '_avance_anterior', None)
+    estado_anterior = getattr(instance, '_estado_anterior', None)
+    asignacion_anterior = getattr(instance, '_asignacion_anterior', None)
+    
+    print(f" Asignado anterior: {asignado_anterior}")
+    print(f" Avance: {avance_anterior} → {instance.avance}")
+    print(f" Estado ejecución: {estado_anterior} → {instance.estado_ejecucion}")
+    print(f" Estado asignación: {asignacion_anterior} → {instance.estado_asignacion}")
+    
+    # Información detallada de la actividad (usado en todos los mensajes)
+    detalle_actividad = (
+        f"la actividad '{instance.nombre}' "
+        f"del espacio {instance.espacio.nombre} "
+        f"del nivel {instance.espacio.nivel.nombre} "
+        f"del proyecto {instance.espacio.nivel.proyecto.nombre}"
+    )
+    
+    # ========================================
+    # 1️⃣ ASIGNACIÓN DE ACTIVIDAD
+    # ========================================
+    if instance.asignado and (created or (asignado_anterior is None and instance.asignado is not None)):
+        print(f" ✅ CASO 1: Asignación de actividad")
+        
         link_rel = reverse('modificar_actividad', args=[instance.id])
-        link = f"https://{settings.ALLOWED_HOSTS[0]}{link_rel}"
-        mensaje = f"Se te ha asignado la actividad: {instance.nombre} en el espacio {instance.espacio.nombre} del nivel {instance.espacio.nivel.nombre} del proyecto {instance.espacio.nivel.proyecto.nombre}"
-
-        # Crear notificación en BD
+        link = f"https://{settings.ALLOWED_HOSTS[0]}{link_rel}" if settings.ALLOWED_HOSTS else link_rel
+        
+        mensaje = (
+            f"Se te ha asignado la actividad '{instance.nombre}' "
+            f"en el espacio {instance.espacio.nombre} "
+            f"del nivel {instance.espacio.nivel.nombre} "
+            f"del proyecto {instance.espacio.nivel.proyecto.nombre}"
+        )
+        
         Notificacion.objects.create(
             usuario=instance.asignado,
             mensaje=mensaje,
             actividad=instance,
             link=link
         )
-        print(f"   ✅ Notificación creada en BD")
-
-        # Enviar push
+        print(f" ✅ Notificación de asignación creada en BD")
+        
         token = getattr(instance.asignado, 'fcm_token', None)
         if token:
-            print(f"   📤 Enviando push a {instance.asignado.email}...")
+            print(f" 📤 Enviando push a {instance.asignado.email}...")
             enviar_notificacion_push("Nueva Actividad Asignada", mensaje, token, link)
         else:
-            print(f"   ⚠️ {instance.asignado.email} no tiene token FCM registrado.")
-
-    # Caso 2: Actividad existente se le asigna usuario por primera vez
-    elif not created:
-        asignado_anterior = getattr(instance, '_asignado_anterior', None)
-        if asignado_anterior is None and instance.asignado is not None:
-            print(f"   ✅ Caso 2: Actividad existente ahora tiene asignado")
-            
-            link_rel = reverse('modificar_actividad', args=[instance.id])
-            link = f"https://{settings.ALLOWED_HOSTS[0]}{link_rel}"
-            mensaje = f"Se te ha asignado la actividad: {instance.nombre} en el espacio {instance.espacio.nombre} del nivel {instance.espacio.nivel.nombre} del proyecto {instance.espacio.nivel.proyecto.nombre}"
-
-            # Crear notificación en BD
-            Notificacion.objects.create(
-                usuario=instance.asignado,
-                mensaje=mensaje,
-                actividad=instance,
-                link=link
-            )
-            print(f"   ✅ Notificación creada en BD")
-
-            # Enviar push
-            token = getattr(instance.asignado, 'fcm_token', None)
-            if token:
-                print(f"   📤 Enviando push a {instance.asignado.email}...")
-                enviar_notificacion_push("Nueva Actividad Asignada", mensaje, token, link)
-            else:
-                print(f"   ⚠️ {instance.asignado.email} no tiene token FCM registrado.")
-        else:
-            print(f"   ℹ️ No se cumple condición para notificar asignación")
+            print(f" ⚠️ {instance.asignado.email} no tiene token FCM")
     
-    print(f"{'='*60}\n")
-
-
-# -----------------------------
-#  ACTUALIZACIONES Y ESTADOS
-# -----------------------------
-@receiver(pre_save, sender=Actividad)
-def actividad_pre_save(sender, instance, **kwargs):
-    if not instance.pk:
-        instance._pre_save_avance = None
-        instance._pre_save_estado = None
-    else:
-        try:
-            old = Actividad.objects.get(pk=instance.pk)
-            instance._pre_save_avance = old.avance
-            instance._pre_save_estado = old.estado_ejecucion
-        except Actividad.DoesNotExist:
-            instance._pre_save_avance = None
-            instance._pre_save_estado = None
-
-
-@receiver(post_save, sender=Actividad)
-def actividad_post_save_notificaciones(sender, instance, created, **kwargs):
-    """
-    Notifica cambios de avance y estado de actividades
-    """
-    pre_avance = getattr(instance, '_pre_save_avance', None)
-    pre_estado = getattr(instance, '_pre_save_estado', None)
-
-    print(f"\n{'='*60}")
-    print(f"🔔 SIGNAL: actividad_post_save_notificaciones")
-    print(f"   Actividad: {instance.nombre}")
-    print(f"   Created: {created}")
-    print(f"   Avance anterior: {pre_avance} → Actual: {instance.avance}")
-    print(f"   Estado anterior: {pre_estado} → Actual: {instance.estado_ejecucion}")
-    print(f"   Asignado: {instance.asignado}")
-
+    # ========================================
+    # 2️⃣ ACTIVIDAD PASA A "POR ASIGNAR"
+    # Notificar a administradores
+    # ========================================
+    if (not created and 
+        asignacion_anterior != 'por_asignar' and 
+        instance.estado_asignacion == 'por_asignar'):
+        
+        print(f" ✅ CASO 2: Actividad cambió a POR ASIGNAR")
+        
+        empresa = getattr(instance.asignado, 'empresa', None) if instance.asignado else None
+        
+        if empresa:
+            mensaje = (
+                f"La actividad '{instance.nombre}' "
+                f"del espacio {instance.espacio.nombre} "
+                f"del nivel {instance.espacio.nivel.nombre} "
+                f"del proyecto {instance.espacio.nivel.proyecto.nombre} "
+                f"está POR ASIGNAR y requiere atención"
+            )
+            
+            usuarios_admin = Usuario.objects.filter(
+                tipo_usuario__in=['admin_empresa', 'superadmin_empresa'],
+                empresa=empresa
+            )
+            
+            print(f" 👥 Administradores a notificar: {usuarios_admin.count()}")
+            
+            for usuario in usuarios_admin:
+                Notificacion.objects.create(usuario=usuario, mensaje=mensaje, actividad=instance)
+                token = getattr(usuario, 'fcm_token', None)
+                if token:
+                    print(f" 📤 Enviando push a {usuario.email}...")
+                    enviar_notificacion_push("⚠️ Actividad por Asignar", mensaje, token)
+    
+    # Si no hay asignado, no procesar más
     if not instance.asignado:
-        print(f"   ⚠️ No hay usuario asignado, omitiendo notificaciones")
+        print(f" ℹ️ No hay usuario asignado, omitiendo notificaciones de ejecución")
         print(f"{'='*60}\n")
         return
-
+    
     empresa_asignado = getattr(instance.asignado, 'empresa', None)
-
-    # 1️⃣ Avance -> 100 y con aprobación de calidad
-    if (not created) and (instance.avance == 100) and instance.aprobacion_calidad == True:
-        print(f"   ✅ Caso 1: Avance 100% CON aprobación calidad")
-        mensaje = f"{instance.asignado} completó la actividad '{instance.nombre}', a la espera de revisión."
+    
+    # ========================================
+    # 3️⃣ ACTIVIDAD EJECUTADA AL 100% CON APROBACIÓN DE CALIDAD
+    # Notificar a CALIDAD cuando avance = 100% Y estado = EJECUTADA
+    # SOLO si NO es una corrección (no viene de OBSERVADA)
+    # ========================================
+    if (not created and 
+        instance.avance == 100 and
+        estado_anterior != 'ejecutada' and 
+        instance.estado_ejecucion == 'ejecutada' and
+        instance.aprobacion_calidad == True and
+        estado_anterior != 'observada'):  # ✅ NO disparar si es corrección
+        
+        print(f" ✅ CASO 3: Actividad EJECUTADA al 100% (con aprobación calidad)")
+        
+        mensaje = (
+            f"{instance.asignado.get_full_name() or instance.asignado.email} "
+            f"completó {detalle_actividad}, "
+            f"a la espera de revisión"
+        )
+        
         usuarios_calidad = Usuario.objects.filter(tipo_usuario='calidad', empresa=empresa_asignado)
-        print(f"   👥 Usuarios calidad encontrados: {usuarios_calidad.count()}")
+        
+        print(f" 👥 Usuarios calidad encontrados: {usuarios_calidad.count()}")
         
         for usuario in usuarios_calidad:
             Notificacion.objects.create(usuario=usuario, mensaje=mensaje, actividad=instance)
             token = getattr(usuario, 'fcm_token', None)
             if token:
-                print(f"   📤 Enviando push a {usuario.email}...")
+                print(f" 📤 Enviando push a {usuario.email}...")
                 enviar_notificacion_push("Actividad Completada", mensaje, token)
-            else:
-                print(f"   ⚠️ {usuario.email} no tiene token FCM")
-
-    # 2️⃣ Avance -> 100 sin aprobación de calidad
-    if (not created) and (instance.avance == 100) and instance.aprobacion_calidad == False:
-        print(f"   ✅ Caso 2: Avance 100% SIN aprobación calidad")
-        mensaje = f"{instance.asignado} completó la actividad '{instance.nombre}', pendiente de aprobación."
+    
+    # ========================================
+    # 4️⃣ ACTIVIDAD EJECUTADA AL 100% SIN APROBACIÓN DE CALIDAD
+    # Notificar a ADMIN directamente
+    # SOLO si NO es una corrección (no viene de OBSERVADA)
+    # ========================================
+    if (not created and 
+        instance.avance == 100 and
+        estado_anterior != 'ejecutada' and 
+        instance.estado_ejecucion == 'ejecutada' and
+        instance.aprobacion_calidad == False and
+        estado_anterior != 'observada'):  # ✅ NO disparar si es corrección
+        
+        print(f" ✅ CASO 4: Actividad EJECUTADA al 100% (sin aprobación calidad)")
+        
+        mensaje = (
+            f"{instance.asignado.get_full_name() or instance.asignado.email} "
+            f"completó {detalle_actividad}, "
+            f"pendiente de aprobación"
+        )
+        
         usuarios_admin = Usuario.objects.filter(tipo_usuario='admin_empresa', empresa=empresa_asignado)
-        print(f"   👥 Usuarios admin encontrados: {usuarios_admin.count()}")
+        
+        print(f" 👥 Usuarios admin encontrados: {usuarios_admin.count()}")
         
         for usuario in usuarios_admin:
             Notificacion.objects.create(usuario=usuario, mensaje=mensaje, actividad=instance)
             token = getattr(usuario, 'fcm_token', None)
             if token:
-                print(f"   📤 Enviando push a {usuario.email}...")
+                print(f" 📤 Enviando push a {usuario.email}...")
                 enviar_notificacion_push("Actividad Completada", mensaje, token)
-            else:
-                print(f"   ⚠️ {usuario.email} no tiene token FCM")
-
-    # 3️⃣ Estado: observada → ejecutada
-    if (not created) and (pre_estado == 'observada') and (instance.estado_ejecucion == 'ejecutada') and instance.aprobacion_calidad == True:
-        print(f"   ✅ Caso 3: Estado cambió de observada a ejecutada")
-        mensaje = f"El supervisor corrigió la actividad '{instance.nombre}', a la espera de revisión."
-        usuarios_calidad = Usuario.objects.filter(tipo_usuario='calidad', empresa=empresa_asignado)
-        print(f"   👥 Usuarios calidad encontrados: {usuarios_calidad.count()}")
+    
+    # ========================================
+    # 5️⃣ ACTIVIDAD OBSERVADA
+    # Notificar al SUPERVISOR asignado
+    # ========================================
+    if (not created and 
+        estado_anterior != 'observada' and 
+        instance.estado_ejecucion == 'observada'):
         
-        for usuario in usuarios_calidad:
-            Notificacion.objects.create(usuario=usuario, mensaje=mensaje, actividad=instance)
-            token = getattr(usuario, 'fcm_token', None)
-            if token:
-                print(f"   📤 Enviando push a {usuario.email}...")
-                enviar_notificacion_push("Actividad Corregida", mensaje, token)
-            else:
-                print(f"   ⚠️ {usuario.email} no tiene token FCM")
-
-    print(f"{'='*60}\n")
-
-
-# -----------------------------
-#  OBSERVADA Y REVISADA
-# -----------------------------
-@receiver(post_save, sender=Actividad)
-def notificar_asignado_observada(sender, instance, created, **kwargs):
-    """
-    Notifica al asignado cuando una actividad es marcada como observada
-    """
-    if not created and instance.estado_ejecucion == 'observada' and instance.asignado:
-        print(f"\n{'='*60}")
-        print(f"🔔 SIGNAL: notificar_asignado_observada")
-        print(f"   Actividad: {instance.nombre}")
-        print(f"   Asignado: {instance.asignado.email}")
+        print(f" ✅ CASO 5: Actividad marcada como OBSERVADA")
         
-        mensaje = f"La actividad '{instance.nombre}' fue marcada como OBSERVADA. Revisa los comentarios."
+        mensaje = (
+            f"La actividad '{instance.nombre}' "
+            f"del espacio {instance.espacio.nombre} "
+            f"del nivel {instance.espacio.nivel.nombre} "
+            f"del proyecto {instance.espacio.nivel.proyecto.nombre} "
+            f"fue marcada como OBSERVADA. "
+            f"Realiza las correcciones necesarias"
+        )
+        
         Notificacion.objects.create(usuario=instance.asignado, mensaje=mensaje, actividad=instance)
-        print(f"   ✅ Notificación creada en BD")
+        print(f" ✅ Notificación de OBSERVADA creada para {instance.asignado.email}")
         
         token = getattr(instance.asignado, 'fcm_token', None)
         if token:
-            print(f"   📤 Enviando push...")
+            print(f" 📤 Enviando push a {instance.asignado.email}...")
             enviar_notificacion_push("⚠️ Actividad Observada", mensaje, token)
-        else:
-            print(f"   ⚠️ Usuario no tiene token FCM")
+    
+    # ========================================
+    # 6️⃣ CORRECCIÓN: OBSERVADA → EJECUTADA
+    # Supervisor corrige y vuelve a ejecutar
+    # Notificar a CALIDAD nuevamente
+    # CONDICIÓN: Debe haber justificación o archivo adjunto
+    # ========================================
+    if (not created and 
+        estado_anterior == 'observada' and 
+        instance.estado_ejecucion == 'ejecutada' and
+        (instance.justificacion or instance.archivo_justificacion)):  # ✅ NUEVA CONDICIÓN
         
-        print(f"{'='*60}\n")
-
-
-@receiver(post_save, sender=Actividad)
-def notificar_revision_actividad(sender, instance, created, **kwargs):
-    """
-    Notifica cuando una actividad es revisada
-    """
-    if not created and instance.estado_ejecucion == 'revisada' and instance.asignado:
-        print(f"\n{'='*60}")
-        print(f"🔔 SIGNAL: notificar_revision_actividad")
-        print(f"   Actividad: {instance.nombre}")
-        print(f"   Asignado: {instance.asignado.email}")
+        print(f" ✅ CASO 6: Actividad CORREGIDA (observada → ejecutada) con justificación")
+        
+        if instance.aprobacion_calidad == True:
+            mensaje = (
+                f"El supervisor {instance.asignado.get_full_name() or instance.asignado.email} "
+                f"corrigió {detalle_actividad}, "
+                f"a la espera de revisión"
+            )
+            
+            usuarios_calidad = Usuario.objects.filter(tipo_usuario='calidad', empresa=empresa_asignado)
+            
+            print(f" 👥 Usuarios calidad encontrados: {usuarios_calidad.count()}")
+            
+            for usuario in usuarios_calidad:
+                Notificacion.objects.create(usuario=usuario, mensaje=mensaje, actividad=instance)
+                token = getattr(usuario, 'fcm_token', None)
+                if token:
+                    print(f" 📤 Enviando push a {usuario.email}...")
+                    enviar_notificacion_push("Actividad Corregida", mensaje, token)
+        else:
+            # Sin aprobación de calidad, notificar a admin
+            mensaje = (
+                f"El supervisor {instance.asignado.get_full_name() or instance.asignado.email} "
+                f"corrigió {detalle_actividad}"
+            )
+            
+            usuarios_admin = Usuario.objects.filter(tipo_usuario='admin_empresa', empresa=empresa_asignado)
+            
+            print(f" 👥 Usuarios admin encontrados: {usuarios_admin.count()}")
+            
+            for usuario in usuarios_admin:
+                Notificacion.objects.create(usuario=usuario, mensaje=mensaje, actividad=instance)
+                token = getattr(usuario, 'fcm_token', None)
+                if token:
+                    print(f" 📤 Enviando push a {usuario.email}...")
+                    enviar_notificacion_push("Actividad Corregida", mensaje, token)
+    
+    # ========================================
+    # 7️⃣ ACTIVIDAD REVISADA
+    # Notificar a CALIDAD y SUPERADMIN
+    # ========================================
+    if (not created and 
+        estado_anterior != 'revisada' and 
+        instance.estado_ejecucion == 'revisada'):
+        
+        print(f" ✅ CASO 7: Actividad REVISADA")
+        
+        mensaje = (
+            f"La actividad '{instance.nombre}' "
+            f"del espacio {instance.espacio.nombre} "
+            f"del nivel {instance.espacio.nivel.nombre} "
+            f"del proyecto {instance.espacio.nivel.proyecto.nombre} "
+            f"ha sido revisada y aprobada correctamente"
+        )
         
         usuarios = Usuario.objects.filter(
-            tipo_usuario__in=['calidad', 'superadmin_empresa'], 
-            empresa=instance.asignado.empresa
+            tipo_usuario__in=['calidad', 'superadmin_empresa'],
+            empresa=empresa_asignado
         )
-        print(f"   👥 Usuarios a notificar: {usuarios.count()}")
         
-        mensaje = f"La actividad '{instance.nombre}' ha sido revisada correctamente."
+        print(f" 👥 Usuarios a notificar: {usuarios.count()}")
         
         for usuario in usuarios:
             Notificacion.objects.create(usuario=usuario, mensaje=mensaje, actividad=instance)
             token = getattr(usuario, 'fcm_token', None)
             if token:
-                print(f"   📤 Enviando push a {usuario.email}...")
+                print(f" 📤 Enviando push a {usuario.email}...")
                 enviar_notificacion_push("✅ Actividad Revisada", mensaje, token)
-            else:
-                print(f"   ⚠️ {usuario.email} no tiene token FCM")
-        
-        print(f"{'='*60}\n")
+    
+    print(f"{'='*60}\n")

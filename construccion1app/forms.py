@@ -319,6 +319,7 @@ class ModificarActividadForm(forms.ModelForm):
             'fecha_inicio': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
             'fecha_fin': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
         }
+    
     def __init__(self, *args, **kwargs):         
         user = kwargs.pop('user', None)         
         super().__init__(*args, **kwargs)          
@@ -349,6 +350,44 @@ class ModificarActividadForm(forms.ModelForm):
                 for campo in campo_solo_lectura:                     
                     if campo in self.fields:                         
                         self.fields[campo].disabled = True              
+            
+            # ========================================
+            # 🔒 RESTRICCIÓN PARA SUPERVISOR_CONSTRUCTOR
+            # No puede seleccionar: observada, revisada, no_ejecutada
+            # ========================================
+            if user.tipo_usuario == 'supervisor_constructor':
+                # Obtener el estado actual de la actividad
+                estado_actual = None
+                if self.instance and self.instance.pk:
+                    estado_actual = self.instance.estado_ejecucion
+                
+                # Definir las opciones permitidas para supervisor
+                # NUNCA puede seleccionar: observada, revisada, no_ejecutada,en ejecucion
+                opciones_prohibidas = ['observada', 'revisada', 'no_ejecutada', 'en_ejecucion']
+                
+                # Filtrar las opciones del campo estado_ejecucion
+                opciones_filtradas = [
+                    (key, value) 
+                    for key, value in self.fields['estado_ejecucion'].choices
+                    if key not in opciones_prohibidas
+                ]
+                
+                # Si la actividad ya está observada, mantenerla como opción pero deshabilitada
+                if estado_actual == 'observada':
+                    # Agregar 'observada' a las opciones pero el campo será de solo lectura
+                    opciones_filtradas.insert(0, ('observada', 'Observada (actual)'))
+                    self.fields['estado_ejecucion'].widget = forms.Select(
+                        choices=opciones_filtradas,
+                        attrs={'class': 'form-control'}
+                    )
+                    # Nota: El supervisor puede cambiar de 'observada' a 'ejecutada'
+                    # pero NO puede volver a poner 'observada' ni seleccionar 'revisada' o 'no_ejecutada'
+                else:
+                    # Aplicar las opciones filtradas
+                    self.fields['estado_ejecucion'].widget = forms.Select(
+                        choices=opciones_filtradas,
+                        attrs={'class': 'form-control'}
+                    )
                         
             # Filtrar usuarios que puedan asignarse             
             self.fields['asignado'].queryset = Usuario.objects.filter(                 
@@ -360,7 +399,6 @@ class ModificarActividadForm(forms.ModelForm):
         if self.instance and hasattr(self.instance, 'pk') and self.instance.pk:             
             # Solo habilitar foto y justificación si estado = "observada"             
             if self.instance.estado_ejecucion != 'observada':                 
-              
                 self.fields['justificacion'].disabled = True               
                 
             # Limitar predecesora y sucesora a actividades del mismo espacio             
@@ -380,6 +418,26 @@ class ModificarActividadForm(forms.ModelForm):
             if archivo.size > 10 * 1024 * 1024:
                 raise forms.ValidationError('El archivo no puede superar 10MB.')
         return archivo
+    
+    def clean_estado_ejecucion(self):
+        """Validación adicional para supervisor_constructor"""
+        estado = self.cleaned_data.get('estado_ejecucion')
+        
+        # Obtener el usuario desde el request (se debe pasar al formulario)
+        user = getattr(self, 'user', None)
+        
+        if user and user.tipo_usuario == 'supervisor_constructor':
+            # Estados prohibidos para supervisor
+            estados_prohibidos = ['observada', 'revisada', 'no_ejecutada']
+            
+            # Si intenta seleccionar un estado prohibido
+            if estado in estados_prohibidos:
+                raise forms.ValidationError(
+                    f'No tienes permiso para marcar la actividad como "{estado}". '
+                    f'Solo puedes marcar como "ejecutada".'
+                )
+        
+        return estado
                 
     def clean_incidencia(self):         
         incidencia = self.cleaned_data.get("incidencia", 0)         
