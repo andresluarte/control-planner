@@ -115,10 +115,15 @@
 }
 </style>
 
+<a href="{% url 'mis_proyectos' %}" class="btn btn-light shadow-sm" style="border: 2px solid #e0e0e0; font-weight: 500;">
+            <i class="fas fa-arrow-left me-2"></i>Volver a Proyectos
+        </a>
+        <br
 
 <div class="container-fluid">
     <div class="card p-4 shadow-sm">
         <h1 class="mb-3 text-center">{{ proyecto.nombre }}</h1>
+        
         {% if request.user.is_superuser or request.user.tipo_usuario == 'superadmin_empresa' %}
         <div class="text-center mb-4">
                 <form action="{% url 'eliminar_proyecto' proyecto.id %}" method="post" 
@@ -567,7 +572,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
             <!-- Acciones -->
             
-                <td>{% if request.user.is_superuser or request.user.tipo_usuario in 'superadmin_empresa admin_empresa' or a.asignado == request.user and a.habilitada %}
+                <td>{% if request.user.is_superuser or request.user.tipo_usuario in 'superadmin_empresa admin_empresa calidad' or a.asignado == request.user and a.habilitada %}
                     <a href="{% url 'modificar_actividad' a.id %}" class="btn btn-outline-primary btn-sm" title="Modificar Avance">
                         <i class="bi bi-pencil-square"></i>
                     </a>
