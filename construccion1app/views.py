@@ -712,6 +712,104 @@ from .models import Proyecto, Actividad
 def programacion_obra(request, proyecto_id):
     proyecto = get_object_or_404(Proyecto, id=proyecto_id)
 
+    vista = request.GET.get("vista", "kanban")
+
+    # === Capturar filtros GET ===
+    nombre = request.GET.get("nombre", "")
+    asignado_id = request.GET.get("asignado", "")
+    estado_ejecucion = request.GET.get("estado_ejecucion", "")
+    estado_asignacion = request.GET.get("estado_asignacion", "")
+    habilitada = request.GET.get("habilitada", "")
+    fecha_inicio = request.GET.get("fecha_inicio", "")
+    fecha_fin = request.GET.get("fecha_fin", "")
+    avance_min = request.GET.get("avance_min", "")
+    avance_max = request.GET.get("avance_max", "")
+    nivel_id = request.GET.get("nivel", "")
+    espacio_nombre = request.GET.get("espacio")
+
+    # === Filtrar actividades ===
+    actividades_qs = Actividad.objects.filter(espacio__nivel__proyecto=proyecto)
+
+    if nombre:
+        actividades_qs = actividades_qs.filter(nombre__icontains=nombre)
+    if asignado_id:
+        actividades_qs = actividades_qs.filter(asignado_id=asignado_id)
+    if estado_ejecucion:
+        actividades_qs = actividades_qs.filter(estado_ejecucion=estado_ejecucion)
+    if estado_asignacion:
+        actividades_qs = actividades_qs.filter(estado_asignacion=estado_asignacion)
+    if habilitada:
+        actividades_qs = actividades_qs.filter(habilitada=(habilitada == "true"))
+    if fecha_inicio:
+        actividades_qs = actividades_qs.filter(fecha_inicio__gte=fecha_inicio)
+    if fecha_fin:
+        actividades_qs = actividades_qs.filter(fecha_fin__lte=fecha_fin)
+    if avance_min:
+        actividades_qs = actividades_qs.filter(avance__gte=avance_min)
+    if avance_max:
+        actividades_qs = actividades_qs.filter(avance__lte=avance_max)
+    if nivel_id:
+        actividades_qs = actividades_qs.filter(espacio__nivel_id=nivel_id)
+    if espacio_nombre:
+        actividades_qs = actividades_qs.filter(espacio__nombre__icontains=espacio_nombre)
+
+    # === Estados ===
+    ESTADO_EJECUCION_CHOICES = {
+        "no_ejecutada": "No ejecutada",
+        "ejecucion": "En ejecución",
+        "ejecutada": "Ejecutada",
+        "observada": "Observada",
+        "revisada": "Revisada",
+    }
+
+    estados = {key: [] for key in ESTADO_EJECUCION_CHOICES.keys()}
+
+    # Solo procesar si hay actividades
+    for actividad in actividades_qs.select_related("espacio__nivel", "asignado"):
+        # Validación de seguridad por si acaso
+        if not actividad.espacio or not actividad.espacio.nivel:
+            continue
+            
+        nivel = actividad.espacio.nivel
+        espacio = actividad.espacio
+        inicio = actividad.fecha_inicio
+        fin = actividad.fecha_fin
+        dias = (fin - inicio).days + 1 if inicio and fin else None
+
+        estados[actividad.estado_ejecucion].append({
+            "nivel": nivel.nombre,
+            "espacio": espacio.nombre,
+            "actividad": actividad,
+            "asignado": actividad.asignado,
+            "dias": dias,
+        })
+
+    context = {
+        "proyecto": proyecto,
+        "estados": estados,
+        "ESTADO_EJECUCION_CHOICES": ESTADO_EJECUCION_CHOICES,
+        "vista": vista,
+        "hoy": date.today(),
+        "asignados": Actividad.objects.filter(
+            espacio__nivel__proyecto=proyecto,
+            asignado__isnull=False
+        ).values_list("asignado__id", "asignado__username").distinct(),
+        "filtros": {
+            "nombre": nombre,
+            "asignado": asignado_id,
+            "estado_ejecucion": estado_ejecucion,
+            "estado_asignacion": estado_asignacion,
+            "habilitada": habilitada,
+            "fecha_inicio": fecha_inicio,
+            "fecha_fin": fecha_fin,
+            "avance_min": avance_min,
+            "avance_max": avance_max,
+        },
+    }
+
+    return render(request, "construccion1app/programacion.html", context)
+    proyecto = get_object_or_404(Proyecto, id=proyecto_id)
+
     vista = request.GET.get("vista", "kanban")  # por defecto 'kanban'
 
     # === Capturar filtros GET ===
