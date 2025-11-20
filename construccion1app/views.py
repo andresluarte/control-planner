@@ -712,7 +712,7 @@ from .models import Proyecto, Actividad
 def programacion_obra(request, proyecto_id):
     proyecto = get_object_or_404(Proyecto, id=proyecto_id)
 
-    vista = request.GET.get("vista", "kanban")
+    vista = request.GET.get("vista", "kanban")  # por defecto 'kanban'
 
     # === Capturar filtros GET ===
     nombre = request.GET.get("nombre", "")
@@ -725,6 +725,7 @@ def programacion_obra(request, proyecto_id):
     avance_min = request.GET.get("avance_min", "")
     avance_max = request.GET.get("avance_max", "")
     nivel_id = request.GET.get("nivel", "")
+
     espacio_nombre = request.GET.get("espacio")
 
     # === Filtrar actividades ===
@@ -752,7 +753,6 @@ def programacion_obra(request, proyecto_id):
         actividades_qs = actividades_qs.filter(espacio__nivel_id=nivel_id)
     if espacio_nombre:
         actividades_qs = actividades_qs.filter(espacio__nombre__icontains=espacio_nombre)
-
     # === Estados ===
     ESTADO_EJECUCION_CHOICES = {
         "no_ejecutada": "No ejecutada",
@@ -785,11 +785,12 @@ def programacion_obra(request, proyecto_id):
         "ESTADO_EJECUCION_CHOICES": ESTADO_EJECUCION_CHOICES,
         "vista": vista,
         "hoy": date.today(),
-        # LÍNEA CORREGIDA:
+        # REEMPLAZA LA LÍNEA COMPLETA POR ESTA:
         "asignados": Actividad.objects.filter(
             espacio__nivel__proyecto=proyecto,
             asignado__isnull=False
         ).values_list("asignado__id", "asignado__username").distinct(),
+        # Para mostrar los filtros seleccionados
         "filtros": {
             "nombre": nombre,
             "asignado": asignado_id,
@@ -803,7 +804,8 @@ def programacion_obra(request, proyecto_id):
         },
     }
 
-    return render(request, "construccion1app/programacion.html", context)  
+    return render(request, "construccion1app/programacion.html", context)
+    
 
 
     from django.contrib.auth.decorators import login_required
