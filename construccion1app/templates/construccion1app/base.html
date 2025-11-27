@@ -12,7 +12,7 @@
     <!-- PWA Tags -->
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#000080">
-    <link rel="apple-touch-icon" href="{% static 'construccion1app/img/logo2.jpeg' %}">
+    <link rel="apple-touch-icon" href="{% static 'construccion1app/img/logo3.png' %}">
 
     {% block css %}{% endblock %}
     <link rel="stylesheet" href="{% static 'construccion1app/css/estilos.css' %}">
@@ -67,7 +67,7 @@ function getCookie(name) {
         <div class="container-fluid">
             <!-- Logo -->
             <a class="navbar-brand d-flex align-items-center" href="#">
-                <img src="{% static 'construccion1app/img/logo2.jpeg' %}" alt="logo" width="40" height="40" class="me-2">
+                <img src="{% static 'construccion1app/img/logo3.png' %}" alt="logo" width="40" height="40" class="me-2">
                 Control Planner
             </a>
 
@@ -275,8 +275,8 @@ function getCookie(name) {
         const notificationTitle = payload.notification.title;
         const notificationOptions = {
           body: payload.notification.body,
-          icon: "/static/construccion1app/img/logo2.jpeg",
-          badge: "/static/construccion1app/img/logo2.jpeg",
+          icon: "/static/construccion1app/img/logo3.png",
+          badge: "/static/construccion1app/img/logo3.png",
           vibrate: [200, 100, 200],
           requireInteraction: true
         };

@@ -34,7 +34,18 @@ INSTALLED_APPS = [
     'crispy_forms',
     'crispy_bootstrap5',
     'construccion1app.apps.Construccion1AppConfig', 
+    'cloudinary',
+    'cloudinary_storage',
 ]
+CLOUDINARY_STORAGE = {
+    'CLOUD_NAME': 'decqtnwch',
+    'API_KEY': '473576481283326',
+    'API_SECRET': 'IhVtnfRa0XUvDMZQnnOLmF0TY6I'
+   
+}
+
+DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+
 
 # Middleware
 MIDDLEWARE = [
@@ -95,6 +106,8 @@ else:
             'PORT': '5432',
         }
     }
+
+
 
 # Custom user model
 AUTH_USER_MODEL = 'construccion1app.Usuario'
