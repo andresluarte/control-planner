@@ -239,7 +239,8 @@ class Actividad(models.Model):
         folder="actividades/justificaciones/",
         null=True,
         blank=True,
-        resource_type='raw',  # Importante para PDFs y otros archivos
+        resource_type='raw',
+        type='upload',  # ← Añade esto
         help_text="Archivo de justificación subida"
     )
     
@@ -297,10 +298,11 @@ class Actividad(models.Model):
         folder="actividades/informacion_adicional/",
         null=True,
         blank=True,
-        resource_type='raw',  # Importante para PDFs y otros archivos
+        resource_type='raw',
+        type='upload',  # ← Añade esto
         help_text="Archivo con información adicional para la actividad"     
     )
-    
+
     def __str__(self):
         estado = "✅ Habilitada" if self.habilitada else "❌ No habilitada"
         return f"{self.nombre} - {self.get_estado_ejecucion_display()} - {estado}"
