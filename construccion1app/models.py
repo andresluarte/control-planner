@@ -4,6 +4,7 @@ from django.contrib.auth.models import AbstractUser,Permission,Group
 from django.utils.translation import gettext_lazy as _
 from django.core.validators import MinValueValidator, MaxValueValidator
 from decimal import Decimal
+from cloudinary.models import CloudinaryField
 
 class Empresa(models.Model):
     nombre = models.CharField(max_length=255)
@@ -233,10 +234,12 @@ class Actividad(models.Model):
 
     # Evidencias de calidad
 
-    archivo_justificacion = models.FileField(
-        upload_to="actividades/justificaciones/",
+    archivo_justificacion = CloudinaryField(
+        'justificacion',
+        folder="actividades/justificaciones/",
         null=True,
         blank=True,
+        resource_type='raw',  # Importante para PDFs y otros archivos
         help_text="Archivo de justificación subida"
     )
     
@@ -289,14 +292,15 @@ class Actividad(models.Model):
         help_text="Indica si la actividad requiere información adicional"
     )
     
-    archivo_informacion = models.FileField(
-        upload_to="actividades/informacion_adicional/",
+    archivo_informacion = CloudinaryField(
+        'informacion',
+        folder="actividades/informacion_adicional/",
         null=True,
         blank=True,
+        resource_type='raw',  # Importante para PDFs y otros archivos
         help_text="Archivo con información adicional para la actividad"     
     )
-
-
+    
     def __str__(self):
         estado = "✅ Habilitada" if self.habilitada else "❌ No habilitada"
         return f"{self.nombre} - {self.get_estado_ejecucion_display()} - {estado}"

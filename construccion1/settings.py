@@ -37,12 +37,23 @@ INSTALLED_APPS = [
     'cloudinary',
     'cloudinary_storage',
 ]
+import cloudinary
+import cloudinary.uploader
+import cloudinary.api
+
 CLOUDINARY_STORAGE = {
-    'CLOUD_NAME': 'decqtnwch',
-    'API_KEY': '473576481283326',
-    'API_SECRET': 'IhVtnfRa0XUvDMZQnnOLmF0TY6I'
-   
+    'CLOUD_NAME': os.environ.get('CLOUDINARY_CLOUD_NAME', 'decqtnwch'),
+    'API_KEY': os.environ.get('CLOUDINARY_API_KEY', '473576481283326'),
+    'API_SECRET': os.environ.get('CLOUDINARY_API_SECRET', 'IhVtnfRa0XUvDMZQnnOLmF0TY6I')
 }
+
+# Configurar cloudinary
+cloudinary.config(
+    cloud_name=CLOUDINARY_STORAGE['CLOUD_NAME'],
+    api_key=CLOUDINARY_STORAGE['API_KEY'],
+    api_secret=CLOUDINARY_STORAGE['API_SECRET'],
+    secure=True
+)
 
 DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 
@@ -146,7 +157,7 @@ STATICFILES_DIRS = [
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Media files (user uploads)
-MEDIA_URL = '/media/'
+#MEDIA_URL = '/media/'
 
 
 # Default primary key field type
