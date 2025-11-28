@@ -438,6 +438,21 @@ class ModificarActividadForm(forms.ModelForm):
                 )
         
         return estado
+    def clean_archivo_justificacion(self):
+    #"""Validación similar para archivo_justificacion si es necesario"""
+        archivo = self.cleaned_data.get('archivo_justificacion')
+        
+        # Si no hay archivo nuevo, retornar el existente
+        if not archivo:
+            return archivo
+        
+        # Si es un archivo nuevo subido
+        if hasattr(archivo, 'name'):
+            # Validar tamaño (máximo 10MB)
+            if hasattr(archivo, 'size') and archivo.size > 10 * 1024 * 1024:
+                raise forms.ValidationError('El archivo no puede superar 10MB.')
+        
+        return archivo
                 
     def clean_incidencia(self):         
         incidencia = self.cleaned_data.get("incidencia", 0)         
