@@ -34,9 +34,85 @@
                     
                     <form method="post" id="actividadForm" enctype="multipart/form-data">
                         {% csrf_token %}
-                        {{ form|crispy }}
                         
-                        <!-- Dentro del formulario, reemplaza la sección de botones -->
+                        <!-- Renderizar campos del formulario uno por uno para tener control -->
+                        {% for field in form %}
+                            {% if field.name != 'archivo_justificacion' and field.name != 'archivo_informacion' %}
+                                {{ field|as_crispy_field }}
+                            {% endif %}
+                        {% endfor %}
+                        
+                        <!-- Campo personalizado para archivo_justificacion -->
+                        <div class="mb-3">
+                            <label for="id_archivo_justificacion" class="form-label">{{ form.archivo_justificacion.label }}</label>
+                            
+                            {% if form.instance.archivo_justificacion %}
+                                <div class="alert alert-info d-flex align-items-center justify-content-between mb-2">
+                                    <div>
+                                        <i class="fas fa-file-alt me-2"></i>
+                                        <strong>Archivo actual:</strong>
+                                        <a href="{{ form.instance.archivo_justificacion.url }}" target="_blank" class="ms-2">
+                                            {{ form.instance.archivo_justificacion.name|basename }}
+                                        </a>
+                                    </div>
+                                    <a href="{{ form.instance.archivo_justificacion.url }}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-eye me-1"></i>Ver archivo
+                                    </a>
+                                </div>
+                            {% else %}
+                                <div class="alert alert-warning mb-2">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    No hay archivo de justificación cargado
+                                </div>
+                            {% endif %}
+                            
+                            {{ form.archivo_justificacion }}
+                            {% if form.archivo_justificacion.help_text %}
+                                <small class="form-text text-muted">{{ form.archivo_justificacion.help_text }}</small>
+                            {% endif %}
+                            {% if form.archivo_justificacion.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.archivo_justificacion.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Campo personalizado para archivo_informacion -->
+                        <div class="mb-3">
+                            <label for="id_archivo_informacion" class="form-label">{{ form.archivo_informacion.label }}</label>
+                            
+                            {% if form.instance.archivo_informacion %}
+                                <div class="alert alert-success d-flex align-items-center justify-content-between mb-2">
+                                    <div>
+                                        <i class="fas fa-file-pdf me-2"></i>
+                                        <strong>PDF actual:</strong>
+                                        <a href="{{ form.instance.archivo_informacion.url }}" target="_blank" class="ms-2">
+                                            {{ form.instance.archivo_informacion.name|basename }}
+                                        </a>
+                                    </div>
+                                    <a href="{{ form.instance.archivo_informacion.url }}" target="_blank" class="btn btn-sm btn-outline-success">
+                                        <i class="fas fa-file-pdf me-1"></i>Ver PDF
+                                    </a>
+                                </div>
+                            {% else %}
+                                <div class="alert alert-warning mb-2">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    No hay archivo de información cargado
+                                </div>
+                            {% endif %}
+                            
+                            {{ form.archivo_informacion }}
+                            {% if form.archivo_informacion.help_text %}
+                                <small class="form-text text-muted">{{ form.archivo_informacion.help_text }}</small>
+                            {% endif %}
+                            {% if form.archivo_informacion.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.archivo_informacion.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Botones -->
                         <div class="d-grid gap-2 mt-4">
                             <button type="submit" class="btn btn-primary btn-lg" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; padding: 12px;">
                                 <i class="fas fa-save me-2"></i>Modificar Actividad
@@ -45,13 +121,7 @@
                                 <i class="fas fa-times me-2"></i>Cancelar
                             </a>
                         </div>
-                        
-
-           
                     </form>
-                    
-
-
                 </div>
             </div>
 
