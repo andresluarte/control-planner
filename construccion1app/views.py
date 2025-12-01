@@ -26,10 +26,17 @@ class MisProyectosViewHome(LoginRequiredMixin, ListView):
 
     def get_queryset(self):
         user = self.request.user
+        empresa_buscar = self.request.GET.get('empresa_buscar', '').strip()
 
         if user.is_superuser:
-            # Superusuario ve todos los proyectos
-            return Proyecto.objects.all()
+            # Superusuario ve todos los proyectos o filtra por nombre de empresa
+            queryset = Proyecto.objects.all()
+            
+            if empresa_buscar:
+                # Búsqueda por coincidencias en el nombre de la empresa (case-insensitive)
+                queryset = queryset.filter(empresa__nombre__icontains=empresa_buscar)
+            
+            return queryset
 
         if user.tipo_usuario in ['superadmin_empresa', 'admin_empresa'] and user.empresa:
             # Administradores de empresa ven todos los proyectos de su empresa
@@ -48,6 +55,11 @@ class MisProyectosViewHome(LoginRequiredMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         
+        # Solo agregar lista de empresas si es superusuario
+        if self.request.user.is_superuser:
+            from .models import Empresa  # Ajusta la importación según tu modelo
+            context['empresas'] = Empresa.objects.all().order_by('nombre')
+        
         # Agregar datos procesados de cada proyecto
         proyectos_con_datos = []
         for proyecto in context['proyectos']:
@@ -64,6 +76,7 @@ class MisProyectosViewHome(LoginRequiredMixin, ListView):
                 'fecha_inicio': proyecto.fecha_inicio,
                 'fecha_fin': proyecto.fecha_fin,
                 'avance_total': float(avance_total),  # Asegurar que sea float
+                'empresa': proyecto.empresa,  # Agregar empresa para el badge
             }
             proyectos_con_datos.append(proyecto_data)
         
@@ -71,7 +84,6 @@ class MisProyectosViewHome(LoginRequiredMixin, ListView):
         context['proyectos_data'] = proyectos_con_datos
         
         return context
-
 
 @login_required
 def editar_visibilidad(request, proyecto_id):
@@ -433,11 +445,16 @@ def agregar_actividad(request, espacio_id):
             # Simplificar el guardado - dejar que el form.save() maneje todo
             actividad = form.save()
             
-            # Mostrar mensaje sobre la relación establecida
+            # Obtener el nombre del departamento correctamente
+            espacio_nombre = espacio.nombre  # El espacio ES el departamento
+            
+            mensaje_base = f'Actividad agregada: "{actividad.nombre}" del espacio "{espacio_nombre}"'
+            
+            # Agregar información sobre la relación si existe
             if hasattr(form, 'relacion_establecida') and form.relacion_establecida:
-                messages.success(request, f'Actividad creada correctamente. {form.relacion_establecida}')
+                messages.success(request, f'{mensaje_base}. {form.relacion_establecida}')
             else:
-                messages.success(request, 'Actividad creada correctamente')
+                messages.success(request, mensaje_base)
                 
             return redirect('dashboard_proyecto', proyecto_id=espacio.nivel.proyecto.id)
         
@@ -455,7 +472,6 @@ def agregar_actividad(request, espacio_id):
         'espacio': espacio,
         'user': request.user,  # Pasar user al template
     })
-
 
 
 @login_required
@@ -643,7 +659,6 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from .models import Actividad, Espacio
 from decimal import Decimal
-
 def importar_actividades(request, espacio_id):
     espacio = get_object_or_404(Espacio, id=espacio_id)
 
@@ -658,48 +673,211 @@ def importar_actividades(request, espacio_id):
                 "nombre", "avance", "incidencia",
                 "estado_ejecucion", "estado_asignacion", "habilitada"
             ]
+            
+            # Validar que existan todas las columnas
             for campo in campos_requeridos:
                 if campo not in df.columns:
-                    raise ValueError(f"Falta la columna obligatoria: {campo}")
+                    raise ValueError(f"❌ Falta la columna obligatoria: '{campo}'")
 
-            # Validar que no haya nulos o vacíos
+            # Validar que no haya valores nulos o vacíos
             for campo in campos_requeridos:
-                if df[campo].isnull().any() or (df[campo].astype(str).str.strip() == "").any():
-                    raise ValueError(f"Existen valores vacíos en la columna: {campo}")
+                if df[campo].isnull().any():
+                    filas_nulas = df[df[campo].isnull()].index.tolist()
+                    raise ValueError(
+                        f"❌ La columna '{campo}' tiene valores vacíos en las filas: {[i+2 for i in filas_nulas]}"
+                    )
+                if (df[campo].astype(str).str.strip() == "").any():
+                    filas_vacias = df[df[campo].astype(str).str.strip() == ""].index.tolist()
+                    raise ValueError(
+                        f"❌ La columna '{campo}' tiene valores vacíos en las filas: {[i+2 for i in filas_vacias]}"
+                    )
 
-            # Validar suma incidencias
-            suma_incidencia = df["incidencia"].sum()
-            if round(float(suma_incidencia), 2) != 100.00:
-                raise ValueError(f"La suma de incidencias debe ser 100. Actualmente es {suma_incidencia}.")
-
-            # Crear actividades
-            for index, row in df.iterrows():
-                Actividad.objects.create(
-                    espacio=espacio,
-                    nombre=row["nombre"],
-                    avance=row["avance"],
-                    incidencia=Decimal(str(row["incidencia"])),
-                    estado_ejecucion=row["estado_ejecucion"],
-                    estado_asignacion=row["estado_asignacion"],
-                    habilitada=bool(row["habilitada"]),
+            # Validar valores permitidos para estado_ejecucion
+            estados_ejecucion_validos = [
+                "no_ejecutada", "ejecucion", "ejecutada", "revisada", "observada"
+            ]
+            estados_invalidos_ejecucion = df[
+                ~df["estado_ejecucion"].isin(estados_ejecucion_validos)
+            ]
+            if not estados_invalidos_ejecucion.empty:
+                valores_invalidos = estados_invalidos_ejecucion["estado_ejecucion"].unique().tolist()
+                filas_invalidas = estados_invalidos_ejecucion.index.tolist()
+                raise ValueError(
+                    f"❌ Valores inválidos en 'estado_ejecucion': {valores_invalidos} "
+                    f"en las filas: {[i+2 for i in filas_invalidas]}. "
+                    f"Valores permitidos: {estados_ejecucion_validos}"
                 )
 
-            messages.success(request, "✅ Actividades importadas con éxito")
+            # Validar valores permitidos para estado_asignacion
+            estados_asignacion_validos = ["POR_ASIGNAR", "ASIGNADA", "NO_ASIGNADA"]
+            estados_invalidos_asignacion = df[
+                ~df["estado_asignacion"].isin(estados_asignacion_validos)
+            ]
+            if not estados_invalidos_asignacion.empty:
+                valores_invalidos = estados_invalidos_asignacion["estado_asignacion"].unique().tolist()
+                filas_invalidas = estados_invalidos_asignacion.index.tolist()
+                raise ValueError(
+                    f"❌ Valores inválidos en 'estado_asignacion': {valores_invalidos} "
+                    f"en las filas: {[i+2 for i in filas_invalidas]}. "
+                    f"Valores permitidos: {estados_asignacion_validos}"
+                )
+
+            # Validar que 'habilitada' sea booleano (True/False, 1/0, Si/No)
+            valores_habilitada_validos = [True, False, 1, 0, "True", "False", "1", "0", 
+                                          "true", "false", "Si", "No", "SI", "NO", 
+                                          "si", "no", "Sí", "sí", "SÍ"]
+            habilitada_invalida = df[
+                ~df["habilitada"].isin(valores_habilitada_validos)
+            ]
+            if not habilitada_invalida.empty:
+                valores_invalidos = habilitada_invalida["habilitada"].unique().tolist()
+                filas_invalidas = habilitada_invalida.index.tolist()
+                raise ValueError(
+                    f"❌ Valores inválidos en 'habilitada': {valores_invalidos} "
+                    f"en las filas: {[i+2 for i in filas_invalidas]}. "
+                    f"Valores permitidos: True/False, 1/0, Si/No"
+                )
+
+            # Validar que 'avance' sea numérico entre 0 y 100
+            if not pd.api.types.is_numeric_dtype(df["avance"]):
+                raise ValueError("❌ La columna 'avance' debe contener solo valores numéricos")
+            
+            avances_invalidos = df[(df["avance"] < 0) | (df["avance"] > 100)]
+            if not avances_invalidos.empty:
+                filas_invalidas = avances_invalidos.index.tolist()
+                valores_invalidos = avances_invalidos["avance"].tolist()
+                raise ValueError(
+                    f"❌ La columna 'avance' debe estar entre 0 y 100. "
+                    f"Valores inválidos: {valores_invalidos} en las filas: {[i+2 for i in filas_invalidas]}"
+                )
+
+            # Validar que 'incidencia' sea numérica y positiva
+            if not pd.api.types.is_numeric_dtype(df["incidencia"]):
+                raise ValueError("❌ La columna 'incidencia' debe contener solo valores numéricos")
+            
+            incidencias_invalidas = df[df["incidencia"] <= 0]
+            if not incidencias_invalidas.empty:
+                filas_invalidas = incidencias_invalidas.index.tolist()
+                raise ValueError(
+                    f"❌ La columna 'incidencia' debe tener valores mayores a 0. "
+                    f"Filas con valores inválidos: {[i+2 for i in filas_invalidas]}"
+                )
+
+            # Validar suma de incidencias
+            suma_incidencia = df["incidencia"].sum()
+            if round(float(suma_incidencia), 2) != 100.00:
+                raise ValueError(
+                    f"❌ La suma de incidencias debe ser exactamente 100.00. "
+                    f"La suma actual es: {round(suma_incidencia, 2)}"
+                )
+
+            # Validar que no haya nombres duplicados
+            nombres_duplicados = df[df.duplicated(subset=["nombre"], keep=False)]
+            if not nombres_duplicados.empty:
+                nombres_dup = nombres_duplicados["nombre"].unique().tolist()
+                raise ValueError(
+                    f"❌ Existen nombres de actividades duplicados: {nombres_dup}"
+                )
+
+            # Normalizar valores booleanos para 'habilitada'
+            def normalizar_booleano(valor):
+                if valor in [True, 1, "True", "1", "true", "Si", "SI", "si", "Sí", "sí", "SÍ"]:
+                    return True
+                return False
+
+            # Crear actividades dentro de una transacción
+            from django.db import transaction
+            
+            with transaction.atomic():
+                actividades_creadas = 0
+                for index, row in df.iterrows():
+                    Actividad.objects.create(
+                        espacio=espacio,
+                        nombre=str(row["nombre"]).strip(),
+                        avance=float(row["avance"]),
+                        incidencia=Decimal(str(row["incidencia"])),
+                        estado_ejecucion=str(row["estado_ejecucion"]).strip(),
+                        estado_asignacion=str(row["estado_asignacion"]).strip(),
+                        habilitada=normalizar_booleano(row["habilitada"]),
+                    )
+                    actividades_creadas += 1
+
+            messages.success(
+                request, 
+                f"✅ {actividades_creadas} actividades importadas con éxito al espacio '{espacio.nombre}'"
+            )
 
         except ValueError as ve:
-            # Errores de validación (que tú controlas)
+            # Errores de validación controlados
             messages.error(request, str(ve))
 
+        except pd.errors.EmptyDataError:
+            messages.error(request, "❌ El archivo Excel está vacío")
+
+        except pd.errors.ParserError:
+            messages.error(request, "❌ El archivo no es un Excel válido o está corrupto")
+
+        except KeyError as ke:
+            messages.error(request, f"❌ Columna no encontrada en el archivo: {str(ke)}")
+
         except Exception as e:
-            # Errores inesperados (ejemplo: archivo corrupto, error de librería, etc.)
-            messages.error(request, f"⚠️ Error al procesar el archivo: {str(e)}")
+            # Errores inesperados
+            messages.error(request, f"⚠️ Error inesperado al procesar el archivo: {str(e)}")
 
         return redirect("dashboard_proyecto", proyecto_id=espacio.nivel.proyecto.id)
 
     return render(request, "construccion1app/importar_actividades.html", {"espacio": espacio})
 
 
+from django.http import HttpResponse
+import pandas as pd
+from io import BytesIO
 
+def descargar_plantilla_actividades(request, espacio_id):
+    """Genera y descarga una plantilla Excel para importar actividades"""
+    espacio = get_object_or_404(Espacio, id=espacio_id)
+    
+    # Crear DataFrame con las columnas requeridas y datos de ejemplo
+    datos_ejemplo = {
+        'nombre': ['Actividad Ejemplo 1', 'Actividad Ejemplo 2'],
+        'avance': [0, 0],
+        'incidencia': [50.00, 50.00],
+        'estado_ejecucion': ['no_ejecutada', 'no_ejecutada'],
+        'estado_asignacion': ['no_asignada', 'asignada'],
+        'habilitada': [True, True]
+    }
+    
+    df = pd.DataFrame(datos_ejemplo)
+    
+    # Crear archivo Excel en memoria
+    output = BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False, sheet_name='Actividades')
+        
+        # Opcional: ajustar ancho de columnas
+        worksheet = writer.sheets['Actividades']
+        for column in worksheet.columns:
+            max_length = 0
+            column = [cell for cell in column]
+            for cell in column:
+                try:
+                    if len(str(cell.value)) > max_length:
+                        max_length = len(cell.value)
+                except:
+                    pass
+            adjusted_width = (max_length + 2)
+            worksheet.column_dimensions[column[0].column_letter].width = adjusted_width
+    
+    output.seek(0)
+    
+    # Preparar respuesta HTTP
+    response = HttpResponse(
+        output.read(),
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = f'attachment; filename="plantilla_actividades_{espacio.nombre}.xlsx"'
+    
+    return response
 
 import datetime
 from datetime import date

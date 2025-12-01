@@ -494,16 +494,148 @@ document.addEventListener('DOMContentLoaded', function () {
 }
 
 @media (max-width: 768px) {
-  .filtros-body form .col-lg-3,
-  .filtros-body form .col-md-4,
-  .filtros-body form .col-sm-6 {
-    flex: 0 0 100%;
-    max-width: 100%;
+  /* Ajustes generales para móvil */
+  .container-fluid {
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
   }
 
+  /* Header de filtros */
+  .card-header {
+    padding: 0.75rem !important;
+  }
+
+  .card-header h5 {
+    font-size: 0.95rem !important;
+  }
+
+  .card-header .btn {
+    font-size: 0.75rem !important;
+    padding: 0.35rem 0.75rem !important;
+  }
+
+  /* Columnas a full width en móvil */
+  .filtros-body form .col-lg-3,
+  .filtros-body form .col-md-4,
+  .filtros-body form .col-sm-6,
+  .filtros-body form .col-12 {
+    flex: 0 0 100%;
+    max-width: 100%;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+
+  /* Card de filtros adicionales */
+  .filtros-body .card {
+    margin-bottom: 1rem;
+  }
+
+  .filtros-body .card-body {
+    padding: 0.75rem !important;
+  }
+
+  /* Labels más compactos */
+  .form-label {
+    font-size: 0.85rem !important;
+    margin-bottom: 0.35rem !important;
+  }
+
+  /* Inputs y selects */
+  .form-control,
+  .form-select {
+    font-size: 0.9rem !important;
+    padding: 0.5rem 0.75rem !important;
+    height: auto !important;
+    min-height: 38px;
+  }
+
+  /* Inputs con border-radius reducido en móvil para mejor usabilidad */
+  .form-control.rounded-pill,
+  .form-select.rounded-pill {
+    border-radius: 1.25rem !important;
+  }
+
+  /* Botones de acción */
+  .filtros-body .col-12.d-flex {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .filtros-body .btn {
+    width: 100%;
+    justify-content: center;
+    font-size: 0.9rem !important;
+    padding: 0.6rem 1rem !important;
+    margin: 0 !important;
+  }
+
+  /* Botón de toggle filtros */
   .toggle-filtros-btn {
     width: 100%;
     margin-top: 0.5rem;
+  }
+
+  /* Espaciado entre grupos de filtros */
+  .filtros-body .row.g-3 {
+    gap: 0.75rem !important;
+  }
+
+  /* Título principal */
+  .d-flex.justify-content-between.align-items-center.mb-4 {
+    flex-direction: column;
+    align-items: flex-start !important;
+    gap: 1rem;
+  }
+
+  .d-flex.justify-content-between.align-items-center.mb-4 h2 {
+    font-size: 1.1rem !important;
+  }
+
+  .d-flex.justify-content-between.align-items-center.mb-4 .btn-group {
+    width: 100%;
+  }
+
+  .d-flex.justify-content-between.align-items-center.mb-4 .btn-group .btn {
+    flex: 1;
+    font-size: 0.85rem;
+  }
+
+  /* Iconos en labels */
+  .form-label i {
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 576px) {
+  /* Ajustes extra para pantallas muy pequeñas */
+  .container-fluid {
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+  }
+
+  .card-header h5 {
+    font-size: 0.9rem !important;
+  }
+
+  .form-control,
+  .form-select {
+    font-size: 0.85rem !important;
+    padding: 0.45rem 0.65rem !important;
+  }
+
+  .filtros-body .btn {
+    font-size: 0.85rem !important;
+    padding: 0.55rem 0.85rem !important;
+  }
+
+  /* Reducir padding de las cards */
+  .card-body {
+    padding: 0.5rem !important;
+  }
+
+  .d-flex.justify-content-between.align-items-center.mb-4 h2 {
+    font-size: 1rem !important;
+    line-height: 1.3;
   }
 }
 
