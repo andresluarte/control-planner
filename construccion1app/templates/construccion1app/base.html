@@ -176,334 +176,359 @@ function getCookie(name) {
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
       {% block js %}{% endblock %}
+  <!-- Firebase Cloud Messaging -->
+  {% if user.is_authenticated %}
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
 
-          <!-- Firebase Cloud Messaging -->
-        <!-- Firebase Cloud Messaging -->
-    <!-- Firebase Cloud Messaging -->
-    {% if user.is_authenticated %}
-    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
-
-    <script>
-      // Función para obtener CSRF token
-      function getCookie(name) {
-        let cookieValue = null;
-        if (document.cookie && document.cookie !== '') {
-          const cookies = document.cookie.split(';');
-          for (let i = 0; i < cookies.length; i++) {
-            const cookie = cookies[i].trim();
-            if (cookie.substring(0, name.length + 1) === (name + '=')) {
-              cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-              break;
-            }
+  <script>
+    // Función para obtener CSRF token
+    function getCookie(name) {
+      let cookieValue = null;
+      if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+          const cookie = cookies[i].trim();
+          if (cookie.substring(0, name.length + 1) === (name + '=')) {
+            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+            break;
           }
         }
-        return cookieValue;
       }
+      return cookieValue;
+    }
 
-      // Configuración de Firebase
-      const firebaseConfig = {
-        apiKey: "AIzaSyD6VyRKgYtAz6_-YudiXmOOIvX0XUfL5po",
-        authDomain: "control-planner-791c6.firebaseapp.com",
-        projectId: "control-planner-791c6",
-        storageBucket: "control-planner-791c6.firebasestorage.app",
-        messagingSenderId: "285111275489",
-        appId: "1:285111275489:web:91482662cf9e86636d0ca0",
+    // Configuración de Firebase
+    const firebaseConfig = {
+      apiKey: "AIzaSyD6VyRKgYtAz6_-YudiXmOOIvX0XUfL5po",
+      authDomain: "control-planner-791c6.firebaseapp.com",
+      projectId: "control-planner-791c6",
+      storageBucket: "control-planner-791c6.firebasestorage.app",
+      messagingSenderId: "285111275489",
+      appId: "1:285111275489:web:91482662cf9e86636d0ca0",
+    };
+
+    // Inicializar Firebase
+    firebase.initializeApp(firebaseConfig);
+    const messaging = firebase.messaging();
+
+    // VAPID Key
+    const VAPID_KEY = "BNZqmRn5MYNhaZ8FdYCsc_A7mLTI5NspzN6dd4Fm1kDo4Lg3ZaN7LBfbQgPPY7V-IatQAQlc8q3mkD1jXZ7IGis";
+
+    // Variable global
+    let swRegistration = null;
+
+    // Función para limpiar Service Workers antiguos
+    async function limpiarServiceWorkersAntiguos() {
+      try {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        console.log(`📋 Service Workers encontrados: ${registrations.length}`);
+        
+        for (let registration of registrations) {
+          const swUrl = registration.active?.scriptURL || registration.installing?.scriptURL || registration.waiting?.scriptURL;
+          
+          // Desregistrar solo si no es nuestro SW actual
+          if (swUrl && !swUrl.includes('firebase-messaging-sw.js')) {
+            console.log(`🗑️ Eliminando SW antiguo: ${swUrl}`);
+            await registration.unregister();
+          }
+        }
+      } catch (error) {
+        console.warn('⚠️ Error al limpiar SWs antiguos:', error);
+      }
+    }
+
+    // Función para registrar el Service Worker
+    async function registrarServiceWorker() {
+      try {
+        console.log('🔧 Iniciando registro de Service Worker...');
+        
+        // Limpiar SWs antiguos primero
+        await limpiarServiceWorkersAntiguos();
+        
+        // Registrar el nuevo SW
+        swRegistration = await navigator.serviceWorker.register('/firebase-messaging-sw.js', {
+          scope: '/',
+          updateViaCache: 'none'
+        });
+        
+        console.log('✅ Service Worker registrado:', swRegistration.scope);
+        
+        // Esperar a que esté activo
+        if (swRegistration.installing) {
+          console.log('⏳ SW instalando...');
+          await new Promise((resolve) => {
+            swRegistration.installing.addEventListener('statechange', function() {
+              if (this.state === 'activated') {
+                resolve();
+              }
+            });
+          });
+        }
+        
+        await navigator.serviceWorker.ready;
+        console.log('✅ Service Worker activo');
+        
+        return swRegistration;
+        
+      } catch (error) {
+        console.error('❌ Error al registrar Service Worker:', error);
+        throw error;
+      }
+    }
+
+    // Función para obtener y guardar token
+    async function obtenerYGuardarToken() {
+      try {
+        console.log('🔑 Obteniendo token FCM...');
+        
+        // Asegurar que el SW esté listo
+        const registration = await navigator.serviceWorker.ready;
+        
+        // Verificar estado del SW
+        if (!registration.active) {
+          throw new Error('Service Worker no está activo');
+        }
+        
+        console.log('✅ Service Worker listo, obteniendo token...');
+        
+        // Obtener token
+        const token = await messaging.getToken({ 
+          vapidKey: VAPID_KEY,
+          serviceWorkerRegistration: registration
+        });
+        
+        if (!token) {
+          throw new Error('No se pudo obtener token');
+        }
+        
+        console.log('✅ Token obtenido:', token.substring(0, 50) + '...');
+        
+        // Verificar si cambió
+        const tokenGuardado = localStorage.getItem('fcm_token');
+        
+        if (tokenGuardado === token) {
+          console.log('ℹ️ Token sin cambios');
+          return token;
+        }
+        
+        console.log('📤 Guardando token en servidor...');
+        
+        // Guardar en servidor
+        const response = await fetch('/save-fcm-token/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+          },
+          body: JSON.stringify({ token: token })
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        console.log('📥 Respuesta servidor:', data);
+        
+        if (data.status === 'success') {
+          localStorage.setItem('fcm_token', token);
+          console.log('✅ Token guardado exitosamente');
+          return token;
+        } else {
+          throw new Error(data.message || 'Error al guardar token');
+        }
+        
+      } catch (error) {
+        console.error('❌ Error al obtener/guardar token:', error);
+        throw error;
+      }
+    }
+
+    // Función principal de inicialización
+    async function inicializarNotificaciones() {
+      try {
+        console.log('🚀 Iniciando notificaciones...');
+        
+        // Verificar soporte
+        if (!('Notification' in window)) {
+          throw new Error('Notificaciones no soportadas');
+        }
+        
+        if (!('serviceWorker' in navigator)) {
+          throw new Error('Service Workers no soportados');
+        }
+        
+        console.log('🔔 Permiso actual:', Notification.permission);
+        
+        // Solicitar permiso si es necesario
+        let permission = Notification.permission;
+        
+        if (permission === 'default') {
+          console.log('📝 Solicitando permiso...');
+          permission = await Notification.requestPermission();
+          console.log('🔔 Permiso obtenido:', permission);
+        }
+        
+        if (permission !== 'granted') {
+          console.warn('❌ Permiso no concedido');
+          return;
+        }
+        
+        // Registrar Service Worker
+        await registrarServiceWorker();
+        
+        // Pequeña espera para asegurar que el SW esté completamente activo
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Obtener token
+        await obtenerYGuardarToken();
+        
+        console.log('🎉 Notificaciones inicializadas correctamente');
+        
+      } catch (error) {
+        console.error('❌ Error al inicializar notificaciones:', error);
+      }
+    }
+
+    // Función pública para renovar token
+    window.forzarRenovacionToken = async function() {
+      try {
+        console.log('🔄 Renovando token...');
+        
+        // Limpiar localStorage
+        localStorage.removeItem('fcm_token');
+        
+        // Verificar permiso
+        let permission = Notification.permission;
+        
+        if (permission !== 'granted') {
+          console.log('📝 Solicitando permiso...');
+          permission = await Notification.requestPermission();
+          
+          if (permission !== 'granted') {
+            alert('❌ Debes conceder permiso para notificaciones');
+            return;
+          }
+        }
+        
+        // Verificar que el SW esté registrado
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        const swActivo = registrations.find(reg => 
+          reg.active?.scriptURL.includes('firebase-messaging-sw.js')
+        );
+        
+        if (!swActivo) {
+          console.log('📝 Registrando Service Worker...');
+          await registrarServiceWorker();
+        } else {
+          console.log('✅ Service Worker ya registrado');
+        }
+        
+        // Esperar un momento
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Obtener nuevo token
+        const token = await obtenerYGuardarToken();
+        
+        if (token) {
+          alert('✅ Token renovado exitosamente!\n\n' + token.substring(0, 50) + '...');
+        } else {
+          alert('❌ No se pudo renovar el token. Revisa la consola.');
+        }
+        
+      } catch (error) {
+        console.error('❌ Error:', error);
+        alert('❌ Error: ' + error.message);
+      }
+    };
+
+    // Notificaciones en primer plano
+    messaging.onMessage((payload) => {
+      console.log('📬 Notificación en primer plano:', payload);
+      
+      const notificationTitle = payload.notification.title;
+      const notificationOptions = {
+        body: payload.notification.body,
+        icon: "/static/construccion1app/img/logo3.png",
+        badge: "/static/construccion1app/img/logo3.png",
+        vibrate: [200, 100, 200],
+        requireInteraction: true,
+        tag: 'control-planner',
+        data: payload.data
       };
 
-      // Inicializar Firebase
-      firebase.initializeApp(firebaseConfig);
-      const messaging = firebase.messaging();
-
-      // VAPID Key
-      const VAPID_KEY = "BNZqmRn5MYNhaZ8FdYCsc_A7mLTI5NspzN6dd4Fm1kDo4Lg3ZaN7LBfbQgPPY7V-IatQAQlc8q3mkD1jXZ7IGis";
-
-      // Variable global
-      let swRegistration = null;
-
-      // Función para limpiar Service Workers antiguos
-      async function limpiarServiceWorkersAntiguos() {
-        try {
-          const registrations = await navigator.serviceWorker.getRegistrations();
-          console.log(`📋 Service Workers encontrados: ${registrations.length}`);
+      if (Notification.permission === "granted") {
+        const notification = new Notification(notificationTitle, notificationOptions);
+        
+        notification.onclick = function(event) {
+          event.preventDefault();
           
-          for (let registration of registrations) {
-            const swUrl = registration.active?.scriptURL || registration.installing?.scriptURL || registration.waiting?.scriptURL;
-            console.log(`🔍 SW encontrado: ${swUrl}`);
-            
-            // Desregistrar solo si no es nuestro SW actual
-            if (swUrl && !swUrl.includes('firebase-messaging-sw.js')) {
-              console.log(`🗑️ Eliminando SW antiguo: ${swUrl}`);
-              await registration.unregister();
-            }
-          }
-        } catch (error) {
-          console.warn('⚠️ Error al limpiar SWs antiguos:', error);
-        }
-      }
-
-      // Función para registrar el Service Worker
-      async function registrarServiceWorker() {
-        try {
-          console.log('🔧 Iniciando registro de Service Worker...');
-          
-          // Limpiar SWs antiguos primero
-          await limpiarServiceWorkersAntiguos();
-          
-          // Registrar el nuevo SW
-          swRegistration = await navigator.serviceWorker.register('/firebase-messaging-sw.js', {
-            scope: '/',
-            updateViaCache: 'none'
-          });
-          
-          console.log('✅ Service Worker registrado:', swRegistration.scope);
-          
-          // Esperar a que esté activo
-          if (swRegistration.installing) {
-            console.log('⏳ SW instalando...');
-            await new Promise((resolve) => {
-              swRegistration.installing.addEventListener('statechange', function() {
-                if (this.state === 'activated') {
-                  resolve();
-                }
-              });
-            });
+          if (payload.data?.url) {
+            window.location.href = payload.data.url;
+          } else if (payload.notification.click_action) {
+            window.location.href = payload.notification.click_action;
+          } else {
+            window.focus();
           }
           
-          await navigator.serviceWorker.ready;
-          console.log('✅ Service Worker activo');
-          
-          return swRegistration;
-          
-        } catch (error) {
-          console.error('❌ Error al registrar Service Worker:', error);
-          throw error;
-        }
+          notification.close();
+        };
       }
+    });
 
-      // Función para obtener y guardar token
-      async function obtenerYGuardarToken() {
-        try {
-          console.log('🔑 Obteniendo token FCM...');
+    // Inicializar cuando el documento esté listo
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', function() {
+        setTimeout(inicializarNotificaciones, 1000);
+      });
+    } else {
+      setTimeout(inicializarNotificaciones, 1000);
+    }
+
+    // Verificar periódicamente si el token sigue siendo válido
+    // Esto reemplaza el onTokenRefresh deprecado
+    setInterval(async () => {
+      try {
+        const tokenGuardado = localStorage.getItem('fcm_token');
+        
+        if (!tokenGuardado) {
+          console.log('🔄 No hay token guardado, obteniendo uno nuevo...');
+          await obtenerYGuardarToken();
+          return;
+        }
+        
+        // Verificar cada 24 horas si el token sigue siendo válido
+        const lastCheck = localStorage.getItem('fcm_token_last_check');
+        const now = Date.now();
+        
+        if (!lastCheck || (now - parseInt(lastCheck)) > 24 * 60 * 60 * 1000) {
+          console.log('🔄 Verificando validez del token...');
           
-          // Asegurar que el SW esté listo
+          // Intentar obtener el token actual
           const registration = await navigator.serviceWorker.ready;
-          
-          // Verificar estado del SW
-          if (!registration.active) {
-            throw new Error('Service Worker no está activo');
-          }
-          
-          console.log('✅ Service Worker listo, obteniendo token...');
-          
-          // Obtener token
-          const token = await messaging.getToken({ 
+          const currentToken = await messaging.getToken({
             vapidKey: VAPID_KEY,
             serviceWorkerRegistration: registration
           });
           
-          if (!token) {
-            throw new Error('No se pudo obtener token');
+          // Si el token cambió, actualizar
+          if (currentToken && currentToken !== tokenGuardado) {
+            console.log('🔄 Token cambió, actualizando...');
+            localStorage.removeItem('fcm_token');
+            await obtenerYGuardarToken();
           }
           
-          console.log('✅ Token obtenido:', token.substring(0, 50) + '...');
-          
-          // Verificar si cambió
-          const tokenGuardado = localStorage.getItem('fcm_token');
-          
-          if (tokenGuardado === token) {
-            console.log('ℹ️ Token sin cambios');
-            return token;
-          }
-          
-          console.log('📤 Guardando token en servidor...');
-          
-          // Guardar en servidor
-          const response = await fetch('/save-fcm-token/', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'X-CSRFToken': getCookie('csrftoken')
-            },
-            body: JSON.stringify({ token: token })
-          });
-          
-          if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-          }
-          
-          const data = await response.json();
-          console.log('📥 Respuesta servidor:', data);
-          
-          if (data.status === 'success') {
-            localStorage.setItem('fcm_token', token);
-            console.log('✅ Token guardado exitosamente');
-            return token;
-          } else {
-            throw new Error(data.message || 'Error al guardar token');
-          }
-          
-        } catch (error) {
-          console.error('❌ Error al obtener/guardar token:', error);
-          throw error;
+          localStorage.setItem('fcm_token_last_check', now.toString());
         }
-      }
-
-      // Función principal de inicialización
-      async function inicializarNotificaciones() {
-        try {
-          console.log('🚀 Iniciando notificaciones...');
-          
-          // Verificar soporte
-          if (!('Notification' in window)) {
-            throw new Error('Notificaciones no soportadas');
-          }
-          
-          if (!('serviceWorker' in navigator)) {
-            throw new Error('Service Workers no soportados');
-          }
-          
-          console.log('🔔 Permiso actual:', Notification.permission);
-          
-          // Solicitar permiso si es necesario
-          let permission = Notification.permission;
-          
-          if (permission === 'default') {
-            console.log('📝 Solicitando permiso...');
-            permission = await Notification.requestPermission();
-            console.log('🔔 Permiso obtenido:', permission);
-          }
-          
-          if (permission !== 'granted') {
-            console.warn('❌ Permiso no concedido');
-            return;
-          }
-          
-          // Registrar Service Worker
-          await registrarServiceWorker();
-          
-          // Pequeña espera para asegurar que el SW esté completamente activo
-          await new Promise(resolve => setTimeout(resolve, 500));
-          
-          // Obtener token
-          await obtenerYGuardarToken();
-          
-          console.log('🎉 Notificaciones inicializadas correctamente');
-          
-        } catch (error) {
-          console.error('❌ Error al inicializar notificaciones:', error);
-        }
-      }
-
-      // Función pública para renovar token
-      window.forzarRenovacionToken = async function() {
-        try {
-          console.log('🔄 Renovando token...');
-          
-          // Limpiar localStorage
-          localStorage.removeItem('fcm_token');
-          
-          // Verificar permiso
-          let permission = Notification.permission;
-          
-          if (permission !== 'granted') {
-            console.log('📝 Solicitando permiso...');
-            permission = await Notification.requestPermission();
-            
-            if (permission !== 'granted') {
-              alert('❌ Debes conceder permiso para notificaciones');
-              return;
-            }
-          }
-          
-          // Verificar que el SW esté registrado
-          const registrations = await navigator.serviceWorker.getRegistrations();
-          const swActivo = registrations.find(reg => 
-            reg.active?.scriptURL.includes('firebase-messaging-sw.js')
-          );
-          
-          if (!swActivo) {
-            console.log('📝 Registrando Service Worker...');
-            await registrarServiceWorker();
-          } else {
-            console.log('✅ Service Worker ya registrado');
-          }
-          
-          // Esperar un momento
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          
-          // Obtener nuevo token
-          const token = await obtenerYGuardarToken();
-          
-          if (token) {
-            alert('✅ Token renovado exitosamente!\n\n' + token.substring(0, 50) + '...');
-          } else {
-            alert('❌ No se pudo renovar el token. Revisa la consola.');
-          }
-          
-        } catch (error) {
-          console.error('❌ Error:', error);
-          alert('❌ Error: ' + error.message);
-        }
-      };
-
-      // Manejar refresh del token
-      messaging.onTokenRefresh(async () => {
-        console.log('🔄 Token expirado, renovando...');
-        localStorage.removeItem('fcm_token');
-        try {
-          await obtenerYGuardarToken();
-        } catch (error) {
-          console.error('❌ Error al renovar token:', error);
-        }
-      });
-
-      // Notificaciones en primer plano
-      messaging.onMessage((payload) => {
-        console.log('📬 Notificación en primer plano:', payload);
         
-        const notificationTitle = payload.notification.title;
-        const notificationOptions = {
-          body: payload.notification.body,
-          icon: "/static/construccion1app/img/logo3.png",
-          badge: "/static/construccion1app/img/logo3.png",
-          vibrate: [200, 100, 200],
-          requireInteraction: true,
-          tag: 'control-planner',
-          data: payload.data
-        };
-
-        if (Notification.permission === "granted") {
-          const notification = new Notification(notificationTitle, notificationOptions);
-          
-          notification.onclick = function(event) {
-            event.preventDefault();
-            
-            if (payload.data?.url) {
-              window.location.href = payload.data.url;
-            } else if (payload.notification.click_action) {
-              window.location.href = payload.notification.click_action;
-            } else {
-              window.focus();
-            }
-            
-            notification.close();
-          };
-        }
-      });
-
-      // Inicializar cuando el documento esté listo
-      if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', function() {
-          setTimeout(inicializarNotificaciones, 1000);
-        });
-      } else {
-        setTimeout(inicializarNotificaciones, 1000);
+      } catch (error) {
+        console.error('⚠️ Error al verificar token:', error);
       }
+    }, 60 * 60 * 1000); // Verificar cada hora
 
-    </script>
-    {% endif %}
-
+  </script>
+  {% endif %}
 </body>
 
 </html>
