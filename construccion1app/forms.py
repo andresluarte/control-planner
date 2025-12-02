@@ -305,7 +305,6 @@ class ActividadForm(forms.ModelForm):
         return instance
 
 
-
 class ModificarActividadForm(forms.ModelForm):     
     class Meta:         
         model = Actividad         
@@ -339,11 +338,12 @@ class ModificarActividadForm(forms.ModelForm):
             if user.tipo_usuario in ['calidad','supervisor_constructor']:                 
                 campos_ocultos = [                     
                     'incidencia', 'asignado', 'estado_asignacion','aprobacion_calidad',                 
-                    'predecesora', 'sucesora', 'fecha_inicio','fecha_fin', 'habilitada'                 
+                    'predecesora', 'sucesora', 'fecha_inicio','fecha_fin', 'habilitada'                
                 ]                 
                 for campo in campos_ocultos:                     
                     if campo in self.fields:                         
-                        self.fields[campo].widget = forms.HiddenInput()              
+                        self.fields[campo].widget = forms.HiddenInput()           
+               
                         
             if user.tipo_usuario in ['calidad', 'supervisor_constructor']:                 
                 campo_solo_lectura = ['nombre']                 
@@ -352,7 +352,21 @@ class ModificarActividadForm(forms.ModelForm):
                         self.fields[campo].disabled = True              
             
             # ========================================
-            # 🔒 RESTRICCIÓN PARA SUPERVISOR_CONSTRUCTOR
+            # 🔒 RESTRICCIÓN PARA SUPERVISOR_CONSTRUCTOR - ARCHIVOS
+            # No puede modificar archivo_justificacion ni archivo_informacion
+            # ========================================
+            if user.tipo_usuario == 'supervisor_constructor':
+                # Deshabilitar campos de archivo para que no puedan modificarse
+                if 'archivo_justificacion' in self.fields:
+                    self.fields['archivo_justificacion'].disabled = True
+                    self.fields['archivo_justificacion'].widget.attrs['readonly'] = True
+                    
+                if 'archivo_informacion' in self.fields:
+                    self.fields['archivo_informacion'].disabled = True
+                    self.fields['archivo_informacion'].widget.attrs['readonly'] = True
+            
+            # ========================================
+            # 🔒 RESTRICCIÓN PARA SUPERVISOR_CONSTRUCTOR - ESTADOS
             # No puede seleccionar: observada, revisada, no_ejecutada
             # ========================================
             if user.tipo_usuario == 'supervisor_constructor':
@@ -438,8 +452,9 @@ class ModificarActividadForm(forms.ModelForm):
                 )
         
         return estado
+    
     def clean_archivo_justificacion(self):
-    #"""Validación similar para archivo_justificacion si es necesario"""
+        """Validación similar para archivo_justificacion si es necesario"""
         archivo = self.cleaned_data.get('archivo_justificacion')
         
         # Si no hay archivo nuevo, retornar el existente
