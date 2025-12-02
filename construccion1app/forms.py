@@ -428,7 +428,7 @@ class ModificarActividadForm(forms.ModelForm):
         
         if user and user.tipo_usuario == 'supervisor_constructor':
             # Estados prohibidos para supervisor
-            estados_prohibidos = ['observada', 'revisada', 'no_ejecutada']
+            estados_prohibidos = ['observada', 'revisada', 'no_ejecutada','en_ejecucion']
             
             # Si intenta seleccionar un estado prohibido
             if estado in estados_prohibidos:
