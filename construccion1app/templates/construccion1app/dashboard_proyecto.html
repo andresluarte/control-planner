@@ -41,6 +41,16 @@
         background-color: #ffc107; 
         color: #000; 
     }
+    .btn-orange {
+    background-color: #ff7a00 !important;
+    color: white !important;
+    border-color: #ff7a00 !important;
+    }
+    .btn-orange:hover {
+        background-color: #e96f00 !important;
+        border-color: #e96f00 !important;
+    }
+
 </style>
 
 {% if messages %}
@@ -285,11 +295,12 @@
                                                 data-bs-target="#importarModal-{{ e.id }}">
                                             <i class="bi bi-file-earmark-excel"></i>
                                         </button>
-                                        <a href="{% url 'descargar_plantilla_actividades' e.id %}" 
-                                            class="btn btn-info btn-lg shadow-sm" 
-                                            title="Descargar Plantilla Excel">
-                                                <i class="bi bi-download"></i>
+                                        <a href="{% url 'descargar_plantilla_actividades' e.id %}"
+                                        class="btn btn-orange btn-lg shadow-sm"
+                                        title="Descargar Plantilla Excel">
+                                            <i class="bi bi-download"></i>
                                         </a>
+
                                         {% endif %}
                                         {% include 'construccion1app/importar_actividades.html' with espacio=e %}
                                     {% else %}
