@@ -52,7 +52,19 @@
     }
 
 </style>
-
+<style>
+    /* Asegurar que el PDF ocupe todo el espacio */
+    .modal-body iframe {
+        min-height: 70vh;
+    }
+    
+    /* En móviles, altura completa */
+    @media (max-width: 767.98px) {
+        .modal-body iframe {
+            min-height: calc(100vh - 150px);
+        }
+    }
+</style>
 {% if messages %}
   <div class="position-fixed top-0 end-0 p-3" style="z-index: 1080;">
     {% for message in messages %}
