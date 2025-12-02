@@ -177,144 +177,223 @@ function getCookie(name) {
 
     {% block js %}{% endblock %}
 
-    <!-- Firebase Cloud Messaging -->
-    {% if user.is_authenticated %}
-    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
+      <!-- Firebase Cloud Messaging -->
+  {% if user.is_authenticated %}
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js"></script>
 
-    <script>
-      // Función para obtener CSRF token
-      function getCookie(name) {
-        let cookieValue = null;
-        if (document.cookie && document.cookie !== '') {
-          const cookies = document.cookie.split(';');
-          for (let i = 0; i < cookies.length; i++) {
-            const cookie = cookies[i].trim();
-            if (cookie.substring(0, name.length + 1) === (name + '=')) {
-              cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-              break;
-            }
+  <script>
+    // Función para obtener CSRF token
+    function getCookie(name) {
+      let cookieValue = null;
+      if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+          const cookie = cookies[i].trim();
+          if (cookie.substring(0, name.length + 1) === (name + '=')) {
+            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+            break;
           }
         }
-        return cookieValue;
       }
+      return cookieValue;
+    }
 
-      // Configuración de Firebase
-      const firebaseConfig = {
-        apiKey: "AIzaSyD6VyRKgYtAz6_-YudiXmOOIvX0XUfL5po",
-        authDomain: "control-planner-791c6.firebaseapp.com",
-        projectId: "control-planner-791c6",
-        storageBucket: "control-planner-791c6.firebasestorage.app",
-        messagingSenderId: "285111275489",
-        appId: "1:285111275489:web:91482662cf9e86636d0ca0",
-      };
+    // Configuración de Firebase
+    const firebaseConfig = {
+      apiKey: "AIzaSyD6VyRKgYtAz6_-YudiXmOOIvX0XUfL5po",
+      authDomain: "control-planner-791c6.firebaseapp.com",
+      projectId: "control-planner-791c6",
+      storageBucket: "control-planner-791c6.firebasestorage.app",
+      messagingSenderId: "285111275489",
+      appId: "1:285111275489:web:91482662cf9e86636d0ca0",
+    };
 
-      firebase.initializeApp(firebaseConfig);
-      const messaging = firebase.messaging();
+    firebase.initializeApp(firebaseConfig);
+    const messaging = firebase.messaging();
 
-      // Función para inicializar notificaciones
-      // Función para inicializar notificaciones
-      async function inicializarNotificaciones() {
-        try {
-          if (!('Notification' in window)) {
-            console.warn('⚠️ Este navegador no soporta notificaciones');
-            return;
-          }
+    // VAPID Key
+    const VAPID_KEY = "BNZqmRn5MYNhaZ8FdYCsc_A7mLTI5NspzN6dd4Fm1kDo4Lg3ZaN7LBfbQgPPY7V-IatQAQlc8q3mkD1jXZ7IGis";
 
+    // Función para inicializar notificaciones
+    async function inicializarNotificaciones() {
+      try {
+        console.log('🚀 Iniciando proceso de notificaciones...');
+        
+        if (!('Notification' in window)) {
+          console.warn('⚠️ Este navegador no soporta notificaciones');
+          return;
+        }
+
+        console.log('🔔 Permiso actual:', Notification.permission);
+
+        // Si ya está concedido, obtener token directamente
+        if (Notification.permission === 'granted') {
+          console.log('✅ Permiso ya concedido, obteniendo token...');
+          await obtenerYGuardarToken();
+          return;
+        }
+
+        // Si no está denegado, solicitar permiso
+        if (Notification.permission !== 'denied') {
+          console.log('📝 Solicitando permiso...');
           const permission = await Notification.requestPermission();
+          console.log('🔔 Nuevo permiso:', permission);
           
           if (permission === 'granted') {
-            console.log('✅ Permiso de notificaciones concedido');
-            
-            const token = await messaging.getToken({ 
-              vapidKey: "BNZqmRn5MYNhaZ8FdYCsc_A7mLTI5NspzN6dd4Fm1kDo4Lg3ZaN7LBfbQgPPY7V-IatQAQlc8q3mkD1jXZ7IGis" 
-            });
-            
-            console.log('📱 Token FCM obtenido:', token);
-            
-            // VERIFICAR si el token ya está guardado en localStorage
-            const tokenGuardado = localStorage.getItem('fcm_token');
-            
-            if (tokenGuardado === token) {
-              console.log('ℹ️ Token ya guardado anteriormente, omitiendo solicitud');
-              return;
-            }
-            
-            const response = await fetch('/save-fcm-token/', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCookie('csrftoken')
-              },
-              body: JSON.stringify({ token: token })
-            });
-            
-            const data = await response.json();
-            console.log('✅ Token guardado en el servidor:', data);
-            
-            // Guardar en localStorage para evitar duplicados
-            if (data.status === 'success') {
-              localStorage.setItem('fcm_token', token);
-            }
-            
+            await obtenerYGuardarToken();
           } else if (permission === 'denied') {
-            console.warn('⚠️ Permiso de notificaciones denegado');
+            console.warn('❌ Usuario denegó el permiso de notificaciones');
+            alert('Has denegado las notificaciones. Para recibirlas, debes activarlas en la configuración de tu navegador.');
+          }
+        } else {
+          console.warn('⚠️ Notificaciones bloqueadas previamente');
+        }
+        
+      } catch (error) {
+        console.error('❌ Error al inicializar notificaciones:', error);
+      }
+    }
+
+    // Función separada para obtener y guardar el token
+    async function obtenerYGuardarToken() {
+      try {
+        console.log('🔑 Obteniendo token FCM...');
+        
+        const token = await messaging.getToken({ vapidKey: VAPID_KEY });
+        
+        if (!token) {
+          console.error('❌ No se pudo obtener el token FCM');
+          return;
+        }
+        
+        console.log('✅ Token FCM obtenido:', token.substring(0, 50) + '...');
+        
+        // Verificar si el token cambió
+        const tokenGuardado = localStorage.getItem('fcm_token');
+        
+        if (tokenGuardado === token) {
+          console.log('ℹ️ Token sin cambios, no se envía al servidor');
+          return;
+        }
+        
+        console.log('📤 Enviando token al servidor...');
+        
+        const response = await fetch('/save-fcm-token/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+          },
+          body: JSON.stringify({ token: token })
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        console.log('📥 Respuesta del servidor:', data);
+        
+        if (data.status === 'success') {
+          localStorage.setItem('fcm_token', token);
+          console.log('✅ Token guardado exitosamente');
+        } else {
+          console.error('❌ Error en la respuesta:', data.message);
+        }
+        
+      } catch (error) {
+        console.error('❌ Error al obtener/guardar token:', error);
+      }
+    }
+
+    // Refrescar token si caduca
+    messaging.onTokenRefresh(async () => {
+      console.log('🔄 Token FCM refrescado');
+      localStorage.removeItem('fcm_token');
+      await obtenerYGuardarToken();
+    });
+
+    // Mostrar notificaciones en primer plano
+    messaging.onMessage((payload) => {
+      console.log('📬 Notificación recibida en primer plano:', payload);
+      
+      const notificationTitle = payload.notification.title;
+      const notificationOptions = {
+        body: payload.notification.body,
+        icon: "/static/construccion1app/img/logo3.png",
+        badge: "/static/construccion1app/img/logo3.png",
+        vibrate: [200, 100, 200],
+        requireInteraction: true,
+        tag: 'control-planner-notification'
+      };
+
+      if (Notification.permission === "granted") {
+        const notification = new Notification(notificationTitle, notificationOptions);
+        
+        notification.onclick = function(event) {
+          event.preventDefault();
+          
+          // Si hay una URL en los datos, navegar a ella
+          if (payload.data && payload.data.url) {
+            window.location.href = payload.data.url;
           } else {
-            console.log('ℹ️ Permiso de notificaciones pendiente');
+            window.focus();
           }
           
-        } catch (error) {
-          console.error('❌ Error al inicializar notificaciones:', error);
-        }
-      }
-
-      // Mostrar notificaciones en primer plano
-      messaging.onMessage((payload) => {
-        console.log('📬 Notificación recibida en primer plano:', payload);
-        
-        const notificationTitle = payload.notification.title;
-        const notificationOptions = {
-          body: payload.notification.body,
-          icon: "/static/construccion1app/img/logo3.png",
-          badge: "/static/construccion1app/img/logo3.png",
-          vibrate: [200, 100, 200],
-          requireInteraction: true
+          notification.close();
         };
+      }
+    });
 
-        if (Notification.permission === "granted") {
-          const notification = new Notification(notificationTitle, notificationOptions);
-          
-          notification.onclick = function(event) {
-            event.preventDefault();
-            window.focus();
-            notification.close();
-          };
-        }
-      });
-
-      // Registrar el service worker con scope correcto
-      if ('serviceWorker' in navigator) {
+    // Registrar el service worker
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
         navigator.serviceWorker.register("/firebase-messaging-sw.js", {
           scope: '/'
         })
           .then(registration => {
-            console.log('✅ Service Worker registrado:', registration.scope);
+            console.log('✅ Service Worker registrado con scope:', registration.scope);
+            
+            // Esperar a que el SW esté activo
             return navigator.serviceWorker.ready;
           })
-          .then(() => {
-            console.log('✅ Service Worker listo y activo');
-            inicializarNotificaciones();
+          .then(registration => {
+            console.log('✅ Service Worker activo');
+            
+            // Asignar el SW al messaging
+            messaging.useServiceWorker(registration);
+            
+            // Inicializar notificaciones después de un pequeño delay
+            setTimeout(() => {
+              inicializarNotificaciones();
+            }, 1000);
           })
           .catch(err => {
             console.error('❌ Error al registrar Service Worker:', err);
-            inicializarNotificaciones();
+            
+            // Intentar inicializar de todas formas
+            setTimeout(() => {
+              inicializarNotificaciones();
+            }, 2000);
           });
-      } else {
-        console.warn('⚠️ Service Workers no soportados');
-        inicializarNotificaciones();
-      }
-    </script>
-    {% endif %}
+      });
+    } else {
+      console.warn('⚠️ Service Workers no soportados en este navegador');
+      inicializarNotificaciones();
+    }
+
+    // También intentar cuando la página ya está cargada
+    if (document.readyState === 'complete') {
+      console.log('📄 Documento ya cargado completamente');
+      setTimeout(() => {
+        if (Notification.permission === 'granted') {
+          obtenerYGuardarToken();
+        }
+      }, 1500);
+    }
+  </script>
+  {% endif %}
 
 </body>
 
