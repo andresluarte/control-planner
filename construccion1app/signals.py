@@ -186,7 +186,7 @@ def notificacion_actividad_unificada(sender, instance, created, **kwargs):
                 "Nueva Actividad Asignada", 
                 mensaje, 
                 token, 
-                usuario=instance.asignado,  # ✅ AGREGAR
+                usuario=instance.asignado,
                 url=link
             )
         else:
@@ -228,11 +228,19 @@ def notificacion_actividad_unificada(sender, instance, created, **kwargs):
                         "⚠️ Actividad por Asignar", 
                         mensaje, 
                         token,
-                        usuario=usuario  # ✅ AGREGAR
+                        usuario=usuario
                     )
 
+    # Si no hay asignado, no procesar más
+    if not instance.asignado:
+        print(f" ℹ️ No hay usuario asignado, omitiendo notificaciones de ejecución")
+        print(f"{'='*60}\n")
+        return
+
+    empresa_asignado = getattr(instance.asignado, 'empresa', None)
+
     # ========================================
-    # 3️⃣ ACTIVIDAD EJECUTADA AL 100% CON APROBACIÓN
+    # 3️⃣ ACTIVIDAD EJECUTADA AL 100% CON APROBACIÓN DE CALIDAD
     # ========================================
     if (not created and 
         instance.avance == 100 and
@@ -262,25 +270,110 @@ def notificacion_actividad_unificada(sender, instance, created, **kwargs):
                     "Actividad Completada", 
                     mensaje, 
                     token,
-                    usuario=usuario  # ✅ AGREGAR
+                    usuario=usuario
                 )
 
-        # ========================================
-        # 4️⃣ ACTIVIDAD EJECUTADA AL 100% SIN APROBACIÓN
-        # ========================================
-        if (not created and 
-            instance.avance == 100 and
-            estado_anterior != 'ejecutada' and 
-            instance.estado_ejecucion == 'ejecutada' and
-            instance.aprobacion_calidad == False and
-            estado_anterior != 'observada'):
-            
-            print(f" ✅ CASO 4: Actividad EJECUTADA al 100% (sin aprobación calidad)")
-            
+    # ========================================
+    # 4️⃣ ACTIVIDAD EJECUTADA AL 100% SIN APROBACIÓN DE CALIDAD
+    # ========================================
+    if (not created and 
+        instance.avance == 100 and
+        estado_anterior != 'ejecutada' and 
+        instance.estado_ejecucion == 'ejecutada' and
+        instance.aprobacion_calidad == False and
+        estado_anterior != 'observada'):
+        
+        print(f" ✅ CASO 4: Actividad EJECUTADA al 100% (sin aprobación calidad)")
+        
+        mensaje = (
+            f"{instance.asignado.get_full_name() or instance.asignado.email} "
+            f"completó {detalle_actividad}, "
+            f"pendiente de aprobación"
+        )
+        
+        usuarios_admin = Usuario.objects.filter(tipo_usuario='admin_empresa', empresa=empresa_asignado)
+        
+        print(f" 👥 Usuarios admin encontrados: {usuarios_admin.count()}")
+        
+        for usuario in usuarios_admin:
+            Notificacion.objects.create(usuario=usuario, mensaje=mensaje, actividad=instance)
+            token = getattr(usuario, 'fcm_token', None)
+            if token:
+                print(f" 📤 Enviando push a {usuario.email}...")
+                enviar_notificacion_push(
+                    "Actividad Completada", 
+                    mensaje, 
+                    token,
+                    usuario=usuario
+                )
+
+    # ========================================
+    # 5️⃣ ACTIVIDAD OBSERVADA
+    # ========================================
+    if (not created and 
+        estado_anterior != 'observada' and 
+        instance.estado_ejecucion == 'observada'):
+        
+        print(f" ✅ CASO 5: Actividad marcada como OBSERVADA")
+        
+        mensaje = (
+            f"La actividad '{instance.nombre}' "
+            f"del espacio {instance.espacio.nombre} "
+            f"del nivel {instance.espacio.nivel.nombre} "
+            f"del proyecto {instance.espacio.nivel.proyecto.nombre} "
+            f"fue marcada como OBSERVADA. "
+            f"Realiza las correcciones necesarias"
+        )
+        
+        Notificacion.objects.create(usuario=instance.asignado, mensaje=mensaje, actividad=instance)
+        print(f" ✅ Notificación de OBSERVADA creada para {instance.asignado.email}")
+        
+        token = getattr(instance.asignado, 'fcm_token', None)
+        if token:
+            print(f" 📤 Enviando push a {instance.asignado.email}...")
+            enviar_notificacion_push(
+                "⚠️ Actividad Observada", 
+                mensaje, 
+                token,
+                usuario=instance.asignado
+            )
+
+    # ========================================
+    # 6️⃣ CORRECCIÓN: OBSERVADA → EJECUTADA
+    # ========================================
+    if (not created and 
+        estado_anterior == 'observada' and 
+        instance.estado_ejecucion == 'ejecutada' and
+        (instance.justificacion or instance.archivo_justificacion)):
+        
+        print(f" ✅ CASO 6: Actividad CORREGIDA (observada → ejecutada) con justificación")
+        
+        if instance.aprobacion_calidad == True:
             mensaje = (
-                f"{instance.asignado.get_full_name() or instance.asignado.email} "
-                f"completó {detalle_actividad}, "
-                f"pendiente de aprobación"
+                f"El supervisor {instance.asignado.get_full_name() or instance.asignado.email} "
+                f"corrigió {detalle_actividad}, "
+                f"a la espera de revisión"
+            )
+            
+            usuarios_calidad = Usuario.objects.filter(tipo_usuario='calidad', empresa=empresa_asignado)
+            
+            print(f" 👥 Usuarios calidad encontrados: {usuarios_calidad.count()}")
+            
+            for usuario in usuarios_calidad:
+                Notificacion.objects.create(usuario=usuario, mensaje=mensaje, actividad=instance)
+                token = getattr(usuario, 'fcm_token', None)
+                if token:
+                    print(f" 📤 Enviando push a {usuario.email}...")
+                    enviar_notificacion_push(
+                        "Actividad Corregida", 
+                        mensaje, 
+                        token,
+                        usuario=usuario
+                    )
+        else:
+            mensaje = (
+                f"El supervisor {instance.asignado.get_full_name() or instance.asignado.email} "
+                f"corrigió {detalle_actividad}"
             )
             
             usuarios_admin = Usuario.objects.filter(tipo_usuario='admin_empresa', empresa=empresa_asignado)
@@ -293,129 +386,46 @@ def notificacion_actividad_unificada(sender, instance, created, **kwargs):
                 if token:
                     print(f" 📤 Enviando push a {usuario.email}...")
                     enviar_notificacion_push(
-                        "Actividad Completada", 
+                        "Actividad Corregida", 
                         mensaje, 
                         token,
-                        usuario=usuario  # ✅ AGREGAR
+                        usuario=usuario
                     )
 
-        # ========================================
-        # 5️⃣ ACTIVIDAD OBSERVADA
-        # ========================================
-        if (not created and 
-            estado_anterior != 'observada' and 
-            instance.estado_ejecucion == 'observada'):
-            
-            print(f" ✅ CASO 5: Actividad marcada como OBSERVADA")
-            
-            mensaje = (
-                f"La actividad '{instance.nombre}' "
-                f"del espacio {instance.espacio.nombre} "
-                f"del nivel {instance.espacio.nivel.nombre} "
-                f"del proyecto {instance.espacio.nivel.proyecto.nombre} "
-                f"fue marcada como OBSERVADA. "
-                f"Realiza las correcciones necesarias"
-            )
-            
-            Notificacion.objects.create(usuario=instance.asignado, mensaje=mensaje, actividad=instance)
-            print(f" ✅ Notificación de OBSERVADA creada para {instance.asignado.email}")
-            
-            token = getattr(instance.asignado, 'fcm_token', None)
+    # ========================================
+    # 7️⃣ ACTIVIDAD REVISADA
+    # ========================================
+    if (not created and 
+        estado_anterior != 'revisada' and 
+        instance.estado_ejecucion == 'revisada'):
+        
+        print(f" ✅ CASO 7: Actividad REVISADA")
+        
+        mensaje = (
+            f"La actividad '{instance.nombre}' "
+            f"del espacio {instance.espacio.nombre} "
+            f"del nivel {instance.espacio.nivel.nombre} "
+            f"del proyecto {instance.espacio.nivel.proyecto.nombre} "
+            f"ha sido revisada y aprobada correctamente"
+        )
+        
+        usuarios = Usuario.objects.filter(
+            tipo_usuario__in=['calidad', 'superadmin_empresa'],
+            empresa=empresa_asignado
+        )
+        
+        print(f" 👥 Usuarios a notificar: {usuarios.count()}")
+        
+        for usuario in usuarios:
+            Notificacion.objects.create(usuario=usuario, mensaje=mensaje, actividad=instance)
+            token = getattr(usuario, 'fcm_token', None)
             if token:
-                print(f" 📤 Enviando push a {instance.asignado.email}...")
+                print(f" 📤 Enviando push a {usuario.email}...")
                 enviar_notificacion_push(
-                    "⚠️ Actividad Observada", 
+                    "✅ Actividad Revisada", 
                     mensaje, 
                     token,
-                    usuario=instance.asignado  # ✅ AGREGAR
+                    usuario=usuario
                 )
 
-        # ========================================
-        # 6️⃣ CORRECCIÓN: OBSERVADA → EJECUTADA
-        # ========================================
-        if (not created and 
-            estado_anterior == 'observada' and 
-            instance.estado_ejecucion == 'ejecutada' and
-            (instance.justificacion or instance.archivo_justificacion)):
-            
-            print(f" ✅ CASO 6: Actividad CORREGIDA (observada → ejecutada) con justificación")
-            
-            if instance.aprobacion_calidad == True:
-                mensaje = (
-                    f"El supervisor {instance.asignado.get_full_name() or instance.asignado.email} "
-                    f"corrigió {detalle_actividad}, "
-                    f"a la espera de revisión"
-                )
-                
-                usuarios_calidad = Usuario.objects.filter(tipo_usuario='calidad', empresa=empresa_asignado)
-                
-                print(f" 👥 Usuarios calidad encontrados: {usuarios_calidad.count()}")
-                
-                for usuario in usuarios_calidad:
-                    Notificacion.objects.create(usuario=usuario, mensaje=mensaje, actividad=instance)
-                    token = getattr(usuario, 'fcm_token', None)
-                    if token:
-                        print(f" 📤 Enviando push a {usuario.email}...")
-                        enviar_notificacion_push(
-                            "Actividad Corregida", 
-                            mensaje, 
-                            token,
-                            usuario=usuario  # ✅ AGREGAR
-                        )
-            else:
-                mensaje = (
-                    f"El supervisor {instance.asignado.get_full_name() or instance.asignado.email} "
-                    f"corrigió {detalle_actividad}"
-                )
-                
-                usuarios_admin = Usuario.objects.filter(tipo_usuario='admin_empresa', empresa=empresa_asignado)
-                
-                print(f" 👥 Usuarios admin encontrados: {usuarios_admin.count()}")
-                
-                for usuario in usuarios_admin:
-                    Notificacion.objects.create(usuario=usuario, mensaje=mensaje, actividad=instance)
-                    token = getattr(usuario, 'fcm_token', None)
-                    if token:
-                        print(f" 📤 Enviando push a {usuario.email}...")
-                        enviar_notificacion_push(
-                            "Actividad Corregida", 
-                            mensaje, 
-                            token,
-                            usuario=usuario  # ✅ AGREGAR
-                        )
-
-        # ========================================
-        # 7️⃣ ACTIVIDAD REVISADA
-        # ========================================
-        if (not created and 
-            estado_anterior != 'revisada' and 
-            instance.estado_ejecucion == 'revisada'):
-            
-            print(f" ✅ CASO 7: Actividad REVISADA")
-            
-            mensaje = (
-                f"La actividad '{instance.nombre}' "
-                f"del espacio {instance.espacio.nombre} "
-                f"del nivel {instance.espacio.nivel.nombre} "
-                f"del proyecto {instance.espacio.nivel.proyecto.nombre} "
-                f"ha sido revisada y aprobada correctamente"
-            )
-            
-            usuarios = Usuario.objects.filter(
-                tipo_usuario__in=['calidad', 'superadmin_empresa'],
-                empresa=empresa_asignado
-            )
-            
-            print(f" 👥 Usuarios a notificar: {usuarios.count()}")
-            
-            for usuario in usuarios:
-                Notificacion.objects.create(usuario=usuario, mensaje=mensaje, actividad=instance)
-                token = getattr(usuario, 'fcm_token', None)
-                if token:
-                    print(f" 📤 Enviando push a {usuario.email}...")
-                    enviar_notificacion_push(
-                        "✅ Actividad Revisada", 
-                        mensaje, 
-                        token,
-                        usuario=usuario  # ✅ AGREGAR
-                    )
+    print(f"{'='*60}\n")
