@@ -213,5 +213,48 @@ document.addEventListener('DOMContentLoaded', function() {
     {% endfor %}
 });
 </script>
+<button onclick="forzarRenovacionToken()" class="btn btn-warning">
+    🔄 Renovar Token FCM
+</button>
+
+<script>
+async function forzarRenovacionToken() {
+    try {
+        // Limpiar localStorage
+        localStorage.removeItem('fcm_token');
+        
+        console.log('🔄 Solicitando nuevo token...');
+        
+        const token = await messaging.getToken({ 
+            vapidKey: "BNZqmRn5MYNhaZ8FdYCsc_A7mLTI5NspzN6dd4Fm1kDo4Lg3ZaN7LBfbQgPPY7V-IatQAQlc8q3mkD1jXZ7IGis" 
+        });
+        
+        console.log('✅ Nuevo token:', token);
+        
+        const response = await fetch('/save-fcm-token/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({ token: token })
+        });
+        
+        const data = await response.json();
+        console.log('Respuesta:', data);
+        
+        if (data.status === 'success') {
+            localStorage.setItem('fcm_token', token);
+            alert('✅ Token renovado exitosamente');
+        } else {
+            alert('❌ Error: ' + data.message);
+        }
+        
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error al renovar token: ' + error.message);
+    }
+}
+</script>
 
 {% endblock %}
