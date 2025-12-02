@@ -1,63 +1,114 @@
 {% extends 'construccion1app/base.html'%}
 
 {% block contenido %}
-{% load static %}
-<!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <title>Mi Empresa</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body class="bg-light">
-
-<div class="container py-5">
-    <h3 class="mb-4 text-center">Mi Empresa</h3>
-
-    {% if messages %}
-        {% for message in messages %}
-            <div class="alert {% if message.tags == 'error' %}alert-danger{% else %}alert-success{% endif %}" role="alert">
-                {{ message }}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-lg-10 mx-auto">
+            <!-- Header -->
+            <div class="mb-4">
+                <h2 class="mb-0">
+                    <i class="bi bi-building"></i> Mi Empresa
+                </h2>
             </div>
-        {% endfor %}
-    {% endif %}
 
-    <div class="table-responsive">
-        <table class="table table-striped table-hover">
-            <thead class="table-dark">
-                <tr>
-                    <th>#</th>
-                    <th>Nombre</th>
-                    <th>Dirección</th>
-                    <th>RUT</th>
-                    <th>Razón Social</th>
-                    <th>Descripción</th>
-                    <th>Activo</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for empresa in empresas %}
-                <tr>
-                    <td>{{ forloop.counter }}</td>
-                    <td>{{ empresa.nombre }}</td>
-                    <td>{{ empresa.direccion }}</td>
-                    <td>{{ empresa.rut }}</td>
-                    <td>{{ empresa.razon_social }}</td>
-                    <td>{{ empresa.descripción }}</td>
-                    <td>{{ empresa.activo|yesno:"Sí,No" }}</td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="6" class="text-center">No hay empresas registradas.</td>
-                </tr>
+            <!-- Mensajes -->
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert {% if message.tags == 'error' %}alert-danger{% else %}alert-success{% endif %} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
                 {% endfor %}
-            </tbody>
-        </table>
+            {% endif %}
+
+            <!-- Card de la empresa -->
+            {% for empresa in empresas %}
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header bg-primary text-white py-3">
+                    <div class="d-flex align-items-center">
+                        <div class="rounded-circle bg-white text-primary d-flex align-items-center justify-content-center me-3" 
+                             style="width: 60px; height: 60px; font-size: 1.8rem;">
+                            <i class="bi bi-building-fill"></i>
+                        </div>
+                        <div>
+                            <h4 class="mb-0">{{ empresa.nombre }}</h4>
+                            <small class="opacity-75">{{ empresa.razon_social }}</small>
+                        </div>
+                        {% if empresa.activo %}
+                            <span class="badge bg-success ms-auto">Activa</span>
+                        {% else %}
+                            <span class="badge bg-secondary ms-auto">Inactiva</span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="card-body p-4">
+                    <!-- Información básica -->
+                    <h5 class="border-bottom pb-2 mb-3">
+                        <i class="bi bi-info-circle text-primary"></i> Información Básica
+                    </h5>
+                    <div class="row mb-4">
+                        <div class="col-md-6 mb-3">
+                            <div class="d-flex align-items-start">
+                                <i class="bi bi-file-text text-muted me-3 mt-1"></i>
+                                <div>
+                                    <small class="text-muted d-block">RUT</small>
+                                    <strong>{{ empresa.rut }}</strong>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="d-flex align-items-start">
+                                <i class="bi bi-briefcase text-muted me-3 mt-1"></i>
+                                <div>
+                                    <small class="text-muted d-block">Razón Social</small>
+                                    <strong>{{ empresa.razon_social }}</strong>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="d-flex align-items-start">
+                                <i class="bi bi-geo-alt text-muted me-3 mt-1"></i>
+                                <div>
+                                    <small class="text-muted d-block">Dirección</small>
+                                    <strong>{{ empresa.direccion }}</strong>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="d-flex align-items-start">
+                                <i class="bi bi-check-circle text-muted me-3 mt-1"></i>
+                                <div>
+                                    <small class="text-muted d-block">Estado</small>
+                                    {% if empresa.activo %}
+                                        <span class="badge bg-success">Activa</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">Inactiva</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Descripción -->
+                    {% if empresa.descripción %}
+                    <h5 class="border-bottom pb-2 mb-3">
+                        <i class="bi bi-card-text text-primary"></i> Descripción
+                    </h5>
+                    <div class="bg-light p-3 rounded">
+                        <p class="mb-0">{{ empresa.descripción }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% empty %}
+            <!-- Estado vacío -->
+            <div class="text-center py-5">
+                <i class="bi bi-building-slash text-muted" style="font-size: 4rem;"></i>
+                <p class="text-muted mt-3 fs-5">No hay empresas registradas.</p>
+            </div>
+            {% endfor %}
+        </div>
     </div>
 </div>
-
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
 {% endblock %}

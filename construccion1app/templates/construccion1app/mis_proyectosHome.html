@@ -152,8 +152,11 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!canvas) return;
         
         const ctx = canvas.getContext('2d');
-        const avance = Number({{ proyecto.avance_total }});
-        const restante = 100 - avance;
+        // 👇 CORRECCIÓN AQUÍ - Forzar formato correcto
+        const avance = parseFloat("{{ proyecto.avance_total|stringformat:'f' }}".replace(',', '.')) || 0;
+        const restante = Math.max(0, 100 - avance);
+
+        console.log('Proyecto {{ proyecto.nombre }}: avance =', avance); // Para debug
 
         new Chart(ctx, {
             type: 'doughnut',
@@ -213,6 +216,7 @@ document.addEventListener('DOMContentLoaded', function() {
     {% endfor %}
 });
 </script>
+<!--
 <button onclick="forzarRenovacionToken()" class="btn btn-warning">
     🔄 Renovar Token FCM
 </button>
@@ -256,5 +260,6 @@ async function forzarRenovacionToken() {
     }
 }
 </script>
+-->
 
 {% endblock %}

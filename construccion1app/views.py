@@ -57,31 +57,16 @@ class MisProyectosViewHome(LoginRequiredMixin, ListView):
         
         # Solo agregar lista de empresas si es superusuario
         if self.request.user.is_superuser:
-            from .models import Empresa  # Ajusta la importación según tu modelo
+            from .models import Empresa
             context['empresas'] = Empresa.objects.all().order_by('nombre')
         
-        # Agregar datos procesados de cada proyecto
-        proyectos_con_datos = []
-        for proyecto in context['proyectos']:
-            # Calcular el avance total del proyecto
-            avance_total = proyecto.calcular_avance()
-            
-            # Crear un diccionario con los datos del proyecto
-            proyecto_data = {
-                'id': proyecto.id,
-                'nombre': proyecto.nombre,
-                'rubro': proyecto.rubro,
-                'ubicacion': proyecto.ubicacion,
-                'descripcion': proyecto.descripcion,
-                'fecha_inicio': proyecto.fecha_inicio,
-                'fecha_fin': proyecto.fecha_fin,
-                'avance_total': float(avance_total),  # Asegurar que sea float
-                'empresa': proyecto.empresa,  # Agregar empresa para el badge
-            }
-            proyectos_con_datos.append(proyecto_data)
+        # Agregar avance_total como atributo temporal a cada proyecto
+        proyectos = context['proyectos']
+        for proyecto in proyectos:
+            proyecto.avance_total = proyecto.calcular_avance()
         
-        # Reemplazar proyectos con los datos procesados
-        context['proyectos_data'] = proyectos_con_datos
+        # Pasar los objetos directamente (no diccionarios)
+        context['proyectos_data'] = proyectos
         
         return context
 
@@ -625,15 +610,30 @@ def detalle_notificacion(request, pk):
 
 
 
-from django.shortcuts import render
 from .models import Notificacion
 from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
+from django.shortcuts import render, redirect
 
 @login_required
 def lista_notificaciones(request):
     # Solo del usuario logueado
-    notificaciones = request.user.notificaciones.all().order_by('-fecha_creacion')
-    return render(request, 'construccion1app/lista_notificaciones.html', {'notificaciones': notificaciones})
+    notificaciones_list = request.user.notificaciones.all().order_by('-fecha_creacion')
+    
+    # Paginación: 30 notificaciones por página
+    paginator = Paginator(notificaciones_list, 30)
+    page_number = request.GET.get('page', 1)
+    notificaciones = paginator.get_page(page_number)
+    
+    return render(request, 'construccion1app/lista_notificaciones.html', {
+        'notificaciones': notificaciones
+    })
+
+@login_required
+def marcar_todas_leidas(request):
+    """Marca todas las notificaciones del usuario como leídas"""
+    request.user.notificaciones.filter(leida=False).update(leida=True)
+    return redirect('lista_notificaciones')
 
 
 

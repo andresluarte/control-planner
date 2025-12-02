@@ -1,18 +1,94 @@
 {% extends "construccion1app/base.html" %}
 {% block contenido %}
 <div class="container mt-4">
-    <h3>Mis Notificaciones</h3>
+    <div class="row mb-4">
+        <div class="col-12">
+            <h2 class="mb-3">
+                <i class="bi bi-bell"></i> Mis Notificaciones
+            </h2>
+            {% if notificaciones %}
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <p class="text-muted mb-0">
+                    Mostrando {{ notificaciones|length }} notificaciones
+                </p>
+                <a href="{% url 'marcar_todas_leidas' %}" class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-check2-all"></i> Marcar todas como leídas
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
     {% if notificaciones %}
-        <ul class="list-group">
+        <div class="list-group shadow-sm">
             {% for notif in notificaciones %}
-            <li class="list-group-item {% if not notif.leida %}fw-bold{% endif %}">
-                <a href="{% url 'detalle_notificacion' notif.id %}">{{ notif.mensaje }}</a>
-                <small class="text-muted d-block">{{ notif.fecha_creacion|date:"d/m/Y H:i" }}</small>
-            </li>
+            <a href="{% url 'detalle_notificacion' notif.id %}" 
+               class="list-group-item list-group-item-action {% if not notif.leida %}border-start border-primary border-4 bg-light{% endif %} position-relative">
+                <div class="d-flex w-100 justify-content-between align-items-start">
+                    <div class="flex-grow-1">
+                        <div class="d-flex align-items-center mb-2">
+                            {% if not notif.leida %}
+                                <span class="badge bg-primary me-2">Nueva</span>
+                            {% endif %}
+                            <h6 class="mb-0 {% if not notif.leida %}fw-bold{% else %}text-muted{% endif %}">
+                                {{ notif.mensaje }}
+                            </h6>
+                        </div>
+                        <small class="text-muted">
+                            <i class="bi bi-clock"></i> {{ notif.fecha_creacion|date:"d/m/Y H:i" }}
+                        </small>
+                    </div>
+                    {% if not notif.leida %}
+                        <span class="position-absolute top-50 end-0 translate-middle-y me-3">
+                            <i class="bi bi-circle-fill text-primary" style="font-size: 0.5rem;"></i>
+                        </span>
+                    {% endif %}
+                </div>
+            </a>
             {% endfor %}
-        </ul>
+        </div>
+
+        <!-- Paginación -->
+        {% if notificaciones.has_other_pages %}
+        <nav aria-label="Paginación de notificaciones" class="mt-4">
+            <ul class="pagination justify-content-center">
+                {% if notificaciones.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page=1">Primera</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ notificaciones.previous_page_number }}">Anterior</a>
+                </li>
+                {% endif %}
+
+                {% for num in notificaciones.paginator.page_range %}
+                    {% if notificaciones.number == num %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ num }}</span>
+                    </li>
+                    {% elif num > notificaciones.number|add:'-3' and num < notificaciones.number|add:'3' %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                    </li>
+                    {% endif %}
+                {% endfor %}
+
+                {% if notificaciones.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ notificaciones.next_page_number }}">Siguiente</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ notificaciones.paginator.num_pages }}">Última</a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
     {% else %}
-        <p>No tienes notificaciones.</p>
+        <div class="text-center py-5">
+            <i class="bi bi-bell-slash text-muted" style="font-size: 4rem;"></i>
+            <p class="text-muted mt-3 fs-5">No tienes notificaciones.</p>
+        </div>
     {% endif %}
 </div>
 {% endblock %}

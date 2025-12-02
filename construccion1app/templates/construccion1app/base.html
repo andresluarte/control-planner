@@ -37,7 +37,7 @@ async function testNotification() {
             method: 'GET',
             headers: {
                 'X-CSRFToken': getCookie('csrftoken')
-            }
+            } 
         });
         
         const data = await response.json();
@@ -95,53 +95,58 @@ function getCookie(name) {
                     <li class="nav-item"><a class="nav-link" href="{% url 'mis_proyectos' %}">Proyectos</a></li>
                     
                     <!-- Notificaciones -->
-                    {% if user.is_authenticated %}
-                    <li class="nav-item dropdown">
-                        <a class="nav-link position-relative" href="#" id="notificacionesDropdown" role="button" 
-                        data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="bi bi-bell"></i>
-                            {% if notificaciones_no_leidas > 0 %}
-                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
-                                {{ notificaciones_no_leidas }}
-                            </span>
-                            {% endif %}
-                        </a>
-                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="notificacionesDropdown" style="min-width: 300px;">
-                            {% with notificaciones=user.notificaciones.all|slice:":5" %}
-                                {% if notificaciones %}
-                                    {% for notif in notificaciones %}
-                                        <li>
-                                            <a class="dropdown-item {% if not notif.leida %}fw-bold{% endif %}" 
-                                            href="{% url 'detalle_notificacion' notif.id %}">
-                                                {{ notif.mensaje|truncatechars:40 }}
-                                                <small class="text-muted d-block">{{ notif.fecha|date:"d/m H:i" }}</small>
-                                            </a>
-                                        </li>
-                                    {% endfor %}
-                                    <li><hr class="dropdown-divider"></li>
-                                    <li><a class="dropdown-item text-center" href="{% url 'lista_notificaciones' %}">Ver todas</a></li>
-                                {% else %}
-                                    <li><span class="dropdown-item-text">No tienes notificaciones</span></li>
-                                {% endif %}
-                            {% endwith %}
-                        </ul>
-                    </li>
-                    {% endif %}
-                    
-                    <li class="nav-item dropdown">
-                        {% if request.user.tipo_usuario == "superadmin_empresa" or request.user.tipo_usuario == "admin_empresa" %}
-                            <a class="nav-link dropdown-toggle" href="#" id="usuarioDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                Usuario
-                            </a>
-                        {% endif %}
-                        <ul class="dropdown-menu" aria-labelledby="usuarioDropdown">
-                            <li><a class="dropdown-item" href="{% url 'agregar_usuario' %}">Agregar Usuario</a></li>
-                            <li><a class="dropdown-item" href="{% url 'lista_usuarios_empresa' %}">Mis Usuarios</a></li>
-                        </ul>
-                    </li>
+                    <!-- Notificaciones -->
+{% if user.is_authenticated %}
+<li class="nav-item dropdown">
+    <a class="nav-link position-relative dropdown-toggle" href="#" id="notificacionesDropdown"
+       role="button" data-bs-toggle="dropdown" aria-expanded="false">
+        <i class="bi bi-bell"></i>
+        {% if notificaciones_no_leidas > 0 %}
+        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+            {{ notificaciones_no_leidas }}
+        </span>
+        {% endif %}
+    </a>
 
-                    <li class="nav-item"><a class="nav-link" href="{% url 'lista_empresas' %}">Empresa</a></li>
+    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="notificacionesDropdown" style="min-width: 300px;">
+        {% with notificaciones=user.notificaciones.all|slice:":5" %}
+            {% if notificaciones %}
+                {% for notif in notificaciones %}
+                    <li>
+                        <a class="dropdown-item {% if not notif.leida %}fw-bold{% endif %}" 
+                           href="{% url 'detalle_notificacion' notif.id %}">
+                            {{ notif.mensaje|truncatechars:40 }}
+                            <small class="text-muted d-block">{{ notif.fecha|date:"d/m H:i" }}</small>
+                        </a>
+                    </li>
+                {% endfor %}
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item text-center" href="{% url 'lista_notificaciones' %}">Ver todas</a></li>
+            {% else %}
+                <li><span class="dropdown-item-text">No tienes notificaciones</span></li>
+            {% endif %}
+        {% endwith %}
+    </ul>
+</li>
+{% endif %}
+                    <!-- Usuario (solo si es admin) -->
+{% if request.user.tipo_usuario == "superadmin_empresa" or request.user.tipo_usuario == "admin_empresa" %}
+<li class="nav-item dropdown">
+    <a class="nav-link dropdown-toggle" href="#" id="usuarioDropdown" role="button"
+       data-bs-toggle="dropdown" aria-expanded="false">
+        Usuario
+    </a>
+    <ul class="dropdown-menu" aria-labelledby="usuarioDropdown">
+        <li><a class="dropdown-item" href="{% url 'agregar_usuario' %}">Agregar Usuario</a></li>
+        <li><a class="dropdown-item" href="{% url 'lista_usuarios_empresa' %}">Mis Usuarios</a></li>
+    </ul>
+</li>
+{% endif %}
+
+
+                   
                     <li class="nav-item"><a class="nav-link" href="{% url 'mi_perfil' %}">Mi Perfil</a></li>
+                     <li class="nav-item"><a class="nav-link" href="{% url 'lista_empresas' %}">Empresa</a></li>
                 </ul>
             </div>
         </div>

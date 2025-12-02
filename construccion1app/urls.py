@@ -1,6 +1,6 @@
 from django.urls import path
 from .views import home, MisProyectosViewHome,login_view,logout_view,agregarusuario,lista_usuarios_empresa,lista_empresas,mi_perfil,dashboard_proyecto,agregar_proyecto,editar_visibilidad,agregar_nivel,agregar_espacio,agregar_actividad,modificar_actividad,detalle_notificacion,lista_notificaciones,mapa_actividades,incidencia_restante,importar_actividades
-from .views import home, MisProyectosViewHome,sumar_incidencias,programacion_obra,eliminar_proyecto,eliminar_nivel,eliminar_espacio,eliminar_actividad,exportar_actividades_excel,test_notification,descargar_plantilla_actividades
+from .views import home, MisProyectosViewHome,sumar_incidencias,programacion_obra,eliminar_proyecto,eliminar_nivel,eliminar_espacio,eliminar_actividad,exportar_actividades_excel,test_notification,descargar_plantilla_actividades,marcar_todas_leidas
 from .views import diagnostico_firebase
 from django.contrib.auth import views as auth_views
 
@@ -45,7 +45,7 @@ urlpatterns = [
     path('espacio/<int:espacio_id>/descargar-plantilla/', 
          descargar_plantilla_actividades, 
          name='descargar_plantilla_actividades'),
-    
+    path('notificaciones/marcar-todas-leidas/', marcar_todas_leidas, name='marcar_todas_leidas'),
     
 
 ]
