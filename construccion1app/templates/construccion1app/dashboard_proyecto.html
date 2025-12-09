@@ -244,15 +244,18 @@
             </div>
 
             <div class="progress mb-3">
-                <div class="progress-bar bg-success progress-bar-striped" 
-                     role="progressbar" 
-                     style="width: {{ nivel.avance }}%">
+                <div class="progress-bar bg-success progress-bar-striped nivel-progress-bar-{{ nivel.id }}" 
+                    role="progressbar" 
+                    data-avance="{{ nivel.avance }}"
+                    aria-valuenow="{{ nivel.avance|floatformat:0 }}" 
+                    aria-valuemin="0" 
+                    aria-valuemax="100"
+                    style="width: 0%;">
                     {% if request.user.is_superuser or request.user.tipo_usuario == 'superadmin_empresa' %}
-                        {{ nivel.ponderado|floatformat:0 }}%
+                        {{ nivel.avance|floatformat:0 }}%
                     {% endif %}
                 </div>
             </div>
-
             <!-- Sección de Espacios Colapsable -->
             <div class="collapse show" id="espacios-nivel-{{ nivel.id }}">
                 <h5 class="mb-3">Espacios</h5>
@@ -688,6 +691,22 @@ document.addEventListener("DOMContentLoaded", function () {
             });
         }
         {% endfor %}
+    {% endfor %}
+});
+
+// Corregir barras de progreso de niveles
+document.addEventListener("DOMContentLoaded", function() {
+    {% for nivel in niveles %}
+    (function() {
+        var bar = document.querySelector('.nivel-progress-bar-{{ nivel.id }}');
+        if (bar) {
+            var avanceStr = bar.getAttribute('data-avance');
+            var avance = parseFloat(avanceStr.replace(',', '.'));
+            if (!isNaN(avance)) {
+                bar.style.width = avance + '%';
+            }
+        }
+    })();
     {% endfor %}
 });
 </script>
