@@ -334,22 +334,31 @@ class ModificarActividadForm(forms.ModelForm):
                 )           
                 
         if user:             
-            # Ocultar ciertos campos si el usuario es calidad o supervisor_constructor             
+            # ========================================
+            # 🔒 RESTRICCIONES PARA CALIDAD Y SUPERVISOR_CONSTRUCTOR
+            # ========================================
             if user.tipo_usuario in ['calidad','supervisor_constructor']:                 
+                # Campos que deben ocultarse (NO incluir fechas aquí)
                 campos_ocultos = [                     
-                    'incidencia', 'asignado', 'estado_asignacion','aprobacion_calidad',                 
-                    'predecesora', 'sucesora', 'fecha_inicio','fecha_fin', 'habilitada'                
+                    'incidencia', 'asignado', 'estado_asignacion', 'aprobacion_calidad',                 
+                    'predecesora', 'sucesora', 'habilitada'                
                 ]                 
                 for campo in campos_ocultos:                     
                     if campo in self.fields:                         
-                        self.fields[campo].widget = forms.HiddenInput()           
-               
-                        
-            if user.tipo_usuario in ['calidad', 'supervisor_constructor']:                 
+                        self.fields[campo].widget = forms.HiddenInput()
+                
+                # ✅ SOLUCIÓN: Eliminar fechas del formulario para estos usuarios
+                # Esto evita que se borren al guardar
+                if 'fecha_inicio' in self.fields:
+                    del self.fields['fecha_inicio']
+                if 'fecha_fin' in self.fields:
+                    del self.fields['fecha_fin']
+                
+                # Campos de solo lectura
                 campo_solo_lectura = ['nombre']                 
                 for campo in campo_solo_lectura:                     
                     if campo in self.fields:                         
-                        self.fields[campo].disabled = True              
+                        self.fields[campo].disabled = True
             
             # ========================================
             # 🔒 RESTRICCIÓN PARA SUPERVISOR_CONSTRUCTOR - ARCHIVOS
@@ -367,7 +376,7 @@ class ModificarActividadForm(forms.ModelForm):
             
             # ========================================
             # 🔒 RESTRICCIÓN PARA SUPERVISOR_CONSTRUCTOR - ESTADOS
-            # No puede seleccionar: observada, revisada, no_ejecutada
+            # No puede seleccionar: observada, revisada, no_ejecutada, en_ejecucion
             # ========================================
             if user.tipo_usuario == 'supervisor_constructor':
                 # Obtener el estado actual de la actividad
@@ -376,7 +385,7 @@ class ModificarActividadForm(forms.ModelForm):
                     estado_actual = self.instance.estado_ejecucion
                 
                 # Definir las opciones permitidas para supervisor
-                # NUNCA puede seleccionar: observada, revisada, no_ejecutada,en ejecucion
+                # NUNCA puede seleccionar: observada, revisada, no_ejecutada, en_ejecucion
                 opciones_prohibidas = ['observada', 'revisada', 'no_ejecutada', 'en_ejecucion']
                 
                 # Filtrar las opciones del campo estado_ejecucion
@@ -386,16 +395,14 @@ class ModificarActividadForm(forms.ModelForm):
                     if key not in opciones_prohibidas
                 ]
                 
-                # Si la actividad ya está observada, mantenerla como opción pero deshabilitada
+                # Si la actividad ya está observada, mantenerla como opción
                 if estado_actual == 'observada':
-                    # Agregar 'observada' a las opciones pero el campo será de solo lectura
+                    # Agregar 'observada' a las opciones
                     opciones_filtradas.insert(0, ('observada', 'Observada (actual)'))
                     self.fields['estado_ejecucion'].widget = forms.Select(
                         choices=opciones_filtradas,
                         attrs={'class': 'form-control'}
                     )
-                    # Nota: El supervisor puede cambiar de 'observada' a 'ejecutada'
-                    # pero NO puede volver a poner 'observada' ni seleccionar 'revisada' o 'no_ejecutada'
                 else:
                     # Aplicar las opciones filtradas
                     self.fields['estado_ejecucion'].widget = forms.Select(
@@ -411,7 +418,7 @@ class ModificarActividadForm(forms.ModelForm):
             
         # Configuraciones que dependen de la instancia existente         
         if self.instance and hasattr(self.instance, 'pk') and self.instance.pk:             
-            # Solo habilitar foto y justificación si estado = "observada"             
+            # Solo habilitar justificación si estado = "observada"             
             if self.instance.estado_ejecucion != 'observada':                 
                 self.fields['justificacion'].disabled = True               
                 
@@ -421,8 +428,7 @@ class ModificarActividadForm(forms.ModelForm):
                     id=self.instance.id                 
                 )                 
                 self.fields['predecesora'].queryset = mismo_espacio                 
-                self.fields['sucesora'].queryset = mismo_espacio     
-                 
+                self.fields['sucesora'].queryset = mismo_espacio
     def clean_archivo_informacion(self):
         archivo = self.cleaned_data.get('archivo_informacion')
         if archivo:

@@ -31,15 +31,27 @@
         font-size: .9rem;
     }
 
-    /* Mapeo de colores */
-    .estado-no_ejecutada { background-color: #6c757d; color: #fff; }
-    .estado-ejecutada { background-color: #0d6efd; color: #fff; }
-    .estado-revisada { background-color: #198754; color: #fff; }
-    .estado-observada { background-color: #dc3545; color: #fff; } 
-    .estado-ejecucion, 
-    .estado-en_ejecucion { 
-        background-color: #ffc107; 
-        color: #000; 
+    /* Mapeo de colores para badges de estado */
+    .badge.estado-no_ejecutada { 
+        background-color: #6c757d !important; 
+        color: #fff !important; 
+    }
+    .badge.estado-ejecutada { 
+        background-color: #0d6efd !important; 
+        color: #fff !important; 
+    }
+    .badge.estado-revisada { 
+        background-color: #198754 !important; 
+        color: #fff !important; 
+    }
+    .badge.estado-observada { 
+        background-color: #dc3545 !important; 
+        color: #fff !important; 
+    } 
+    .badge.estado-ejecucion, 
+    .badge.estado-en_ejecucion { 
+        background-color: #ffc107 !important; 
+        color: #000 !important; 
     }
     .btn-orange {
     background-color: #ff7a00 !important;
@@ -450,7 +462,7 @@
                                                 </td>
                                                 <td>
                                                     <span class="badge estado-{{ a.estado_ejecucion|lower }}">
-                                                        {{ a.get_estado_ejecucion_display }}
+                                                        {{ a.estado_ejecucion }}
                                                     </span>
                                                 </td>
                                                 <td>

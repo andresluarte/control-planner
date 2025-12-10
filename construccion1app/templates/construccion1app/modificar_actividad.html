@@ -35,12 +35,55 @@
                     <form method="post" id="actividadForm" enctype="multipart/form-data">
                         {% csrf_token %}
                         
-                        <!-- Renderizar todos los campos EXCEPTO los archivos -->
+                        <!-- Renderizar todos los campos EXCEPTO archivos Y fechas -->
                         {% for field in form %}
-                            {% if field.name != 'archivo_justificacion' and field.name != 'archivo_informacion' %}
+                            {% if field.name != 'archivo_justificacion' and field.name != 'archivo_informacion' and field.name != 'fecha_inicio' and field.name != 'fecha_fin' %}
                                 {{ field|as_crispy_field }}
                             {% endif %}
                         {% endfor %}
+                        
+                        <!-- ✅ Renderizar fechas manualmente SOLO para admin/superadmin -->
+                        {% if user.tipo_usuario == 'superadmin_empresa' or user.tipo_usuario == 'admin_empresa' or user.is_superuser %}
+                            {% if 'fecha_inicio' in form.fields %}
+                                <div class="mb-3">
+                                    <label for="id_fecha_inicio" class="form-label fw-bold">
+                                        <i class="fas fa-calendar-alt me-2"></i>Fecha de Inicio
+                                        {% if form.fecha_inicio.field.required %}<span class="text-danger">*</span>{% endif %}
+                                    </label>
+                                    <input type="date" 
+                                        name="fecha_inicio" 
+                                        id="id_fecha_inicio" 
+                                        class="form-control"
+                                        value="{% if form.instance.fecha_inicio %}{{ form.instance.fecha_inicio|date:'Y-m-d' }}{% endif %}">
+                                    <small class="form-text text-muted d-block mt-1">
+                                        Fecha planificada de inicio de la actividad
+                                    </small>
+                                    {% if form.fecha_inicio.errors %}
+                                        <div class="invalid-feedback d-block">{{ form.fecha_inicio.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            {% endif %}
+                            
+                            {% if 'fecha_fin' in form.fields %}
+                                <div class="mb-3">
+                                    <label for="id_fecha_fin" class="form-label fw-bold">
+                                        <i class="fas fa-calendar-check me-2"></i>Fecha de Fin
+                                        {% if form.fecha_fin.field.required %}<span class="text-danger">*</span>{% endif %}
+                                    </label>
+                                    <input type="date" 
+                                        name="fecha_fin" 
+                                        id="id_fecha_fin" 
+                                        class="form-control"
+                                        value="{% if form.instance.fecha_fin %}{{ form.instance.fecha_fin|date:'Y-m-d' }}{% endif %}">
+                                    <small class="form-text text-muted d-block mt-1">
+                                        Fecha planificada de fin de la actividad
+                                    </small>
+                                    {% if form.fecha_fin.errors %}
+                                        <div class="invalid-feedback d-block">{{ form.fecha_fin.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            {% endif %}
+                        {% endif %}
                         
                         <!-- Campo personalizado para archivo_justificacion -->
                         <div class="mb-3">
@@ -301,21 +344,7 @@ document.addEventListener("DOMContentLoaded", function() {
     const estadoEjecucionSelect = document.querySelector("#id_estado_ejecucion");
     const sucesuraSelect = document.querySelector("#id_sucesora");
     
-    // Verificación de incidencia
-    if (incidenciaInput) {
-        incidenciaInput.addEventListener("input", function() {
-            const incidenciaActual = parseFloat(incidenciaInput.value) || 0;
-            
-            fetch("{% url 'incidencia_restante' espacio.id %}")
-                .then(response => response.json())
-                .then(data => {
-                    const restante = 100 - data.total_otras;
-                    if (incidenciaActual > restante) {
-                        alert(`⚠️ Tu actividad debería tener ${restante}% ya que las demás suman ${data.total_otras}%.`);
-                    }
-                });
-        });
-    }
+
     
     // Verificación de estado de ejecución y sucesora
     if (estadoEjecucionSelect && sucesuraSelect) {
