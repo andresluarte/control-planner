@@ -16,7 +16,7 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-+bfs32#558dz+8^9@pjjc
 DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
 # Hosts permitidos
-ALLOWED_HOSTS = ['.herokuapp.com', 'localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['.herokuapp.com', 'localhost', '127.0.0.1','controlplanner.cl','www.controlplanner.cl']
 
 # Configuración de login
 LOGIN_REDIRECT_URL = '/mis-proyectos/'  
@@ -142,7 +142,9 @@ USE_I18N = True
 # CSRF
 CSRF_TRUSTED_ORIGINS = [
     'https://control-plannner-4c7ab22173ea.herokuapp.com',
-    'https://*.herokuapp.com',
+    'https://*.herokuapp.com','https://controlplanner.cl',
+    'https://www.controlplanner.cl',
+
 ]
 
 # Static files
