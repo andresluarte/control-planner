@@ -358,7 +358,7 @@ def agregar_nivel(request, proyecto_id):
     
 
 
-
+@login_required
 def sumar_incidencias(request, proyecto_id):
     proyecto = get_object_or_404(Proyecto, id=proyecto_id)
     suma = Nivel.objects.filter(proyecto=proyecto).aggregate(total=Sum("incidencia"))["total"] or 0
@@ -395,7 +395,7 @@ from django.shortcuts import get_object_or_404, redirect
 from django.contrib import messages
 from django.http import HttpResponseForbidden
 from .models import Espacio
-
+@login_required
 def eliminar_espacio(request, pk):
     espacio = get_object_or_404(Espacio, pk=pk)
 
@@ -562,7 +562,7 @@ from django.shortcuts import get_object_or_404, redirect
 from django.contrib import messages
 from django.http import HttpResponseForbidden
 from .models import Actividad
-
+@login_required
 def eliminar_actividad(request, pk):
     actividad = get_object_or_404(Actividad, pk=pk)
 
@@ -586,7 +586,7 @@ def eliminar_actividad(request, pk):
 
 # context_processors.py
 from .models import Notificacion
-
+@login_required
 def notificaciones_context(request):
     if request.user.is_authenticated:
         notificaciones_no_leidas = request.user.notificaciones.filter(leida=False).count()
@@ -594,7 +594,7 @@ def notificaciones_context(request):
         notificaciones_no_leidas = 0
     return {"notificaciones_no_leidas": notificaciones_no_leidas}
 
-
+@login_required
 def detalle_notificacion(request, pk):
     # Obtener la notificación del usuario
     notif = get_object_or_404(Notificacion, pk=pk, usuario=request.user)
@@ -643,7 +643,7 @@ def marcar_todas_leidas(request):
 
 from django.db.models import Sum
 from .models import Actividad
-
+@login_required
 def incidencia_restante(request, espacio_id):
     exclude_id = request.GET.get("exclude_id")
     qs = Actividad.objects.filter(espacio_id=espacio_id)
@@ -660,6 +660,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from .models import Actividad, Espacio
 from decimal import Decimal
+@login_required
 def importar_actividades(request, espacio_id):
     espacio = get_object_or_404(Espacio, id=espacio_id)
 
@@ -763,6 +764,19 @@ def importar_actividades(request, espacio_id):
                     f"❌ La columna 'incidencia' debe tener valores mayores a 0. "
                     f"Filas con valores inválidos: {[i+2 for i in filas_invalidas]}"
                 )
+                        # Validar que 'avance' sea numérico
+            if not pd.api.types.is_numeric_dtype(df["avance"]):
+                raise ValueError("❌ La columna 'avance' debe contener solo valores numéricos")
+
+            # Validar que 'avance' sea exactamente 0 o 100 (sin decimales)
+            avances_invalidos = df[~df["avance"].isin([0, 0.0, 100, 100.0])]
+            if not avances_invalidos.empty:
+                filas_invalidas = avances_invalidos.index.tolist()
+                valores_invalidos = avances_invalidos["avance"].tolist()
+                raise ValueError(
+                    f"❌ La columna 'avance' solo puede contener los valores 0 o 100. "
+                    f"Valores inválidos: {valores_invalidos} en las filas: {[i+2 for i in filas_invalidas]}"
+    )
 
             # Validar suma de incidencias
             suma_incidencia = df["incidencia"].sum()
@@ -833,7 +847,7 @@ def importar_actividades(request, espacio_id):
 from django.http import HttpResponse
 import pandas as pd
 from io import BytesIO
-
+@login_required
 def descargar_plantilla_actividades(request, espacio_id):
     """Genera y descarga una plantilla Excel para importar actividades"""
     espacio = get_object_or_404(Espacio, id=espacio_id)
@@ -987,105 +1001,11 @@ def programacion_obra(request, proyecto_id):
     }
 
     return render(request, "construccion1app/programacion.html", context)
-    proyecto = get_object_or_404(Proyecto, id=proyecto_id)
-
-    vista = request.GET.get("vista", "kanban")  # por defecto 'kanban'
-
-    # === Capturar filtros GET ===
-    nombre = request.GET.get("nombre", "")
-    asignado_id = request.GET.get("asignado", "")
-    estado_ejecucion = request.GET.get("estado_ejecucion", "")
-    estado_asignacion = request.GET.get("estado_asignacion", "")
-    habilitada = request.GET.get("habilitada", "")
-    fecha_inicio = request.GET.get("fecha_inicio", "")
-    fecha_fin = request.GET.get("fecha_fin", "")
-    avance_min = request.GET.get("avance_min", "")
-    avance_max = request.GET.get("avance_max", "")
-    nivel_id = request.GET.get("nivel", "")
-
-    espacio_nombre = request.GET.get("espacio")
-
-    # === Filtrar actividades ===
-    actividades_qs = Actividad.objects.filter(espacio__nivel__proyecto=proyecto)
-
-    if nombre:
-        actividades_qs = actividades_qs.filter(nombre__icontains=nombre)
-    if asignado_id:
-        actividades_qs = actividades_qs.filter(asignado_id=asignado_id)
-    if estado_ejecucion:
-        actividades_qs = actividades_qs.filter(estado_ejecucion=estado_ejecucion)
-    if estado_asignacion:
-        actividades_qs = actividades_qs.filter(estado_asignacion=estado_asignacion)
-    if habilitada:
-        actividades_qs = actividades_qs.filter(habilitada=(habilitada == "true"))
-    if fecha_inicio:
-        actividades_qs = actividades_qs.filter(fecha_inicio__gte=fecha_inicio)
-    if fecha_fin:
-        actividades_qs = actividades_qs.filter(fecha_fin__lte=fecha_fin)
-    if avance_min:
-        actividades_qs = actividades_qs.filter(avance__gte=avance_min)
-    if avance_max:
-        actividades_qs = actividades_qs.filter(avance__lte=avance_max)
-    if nivel_id:
-        actividades_qs = actividades_qs.filter(espacio__nivel_id=nivel_id)
-    if espacio_nombre:
-        actividades_qs = actividades_qs.filter(espacio__nombre__icontains=espacio_nombre)
-    # === Estados ===
-    ESTADO_EJECUCION_CHOICES = {
-        "no_ejecutada": "No ejecutada",
-        "ejecucion": "En ejecución",
-        "ejecutada": "Ejecutada",
-        "observada": "Observada",
-        "revisada": "Revisada",
-    }
-
-    estados = {key: [] for key in ESTADO_EJECUCION_CHOICES.keys()}
-
-    for actividad in actividades_qs.select_related("espacio__nivel", "asignado"):
-        nivel = actividad.espacio.nivel
-        espacio = actividad.espacio
-        inicio = actividad.fecha_inicio
-        fin = actividad.fecha_fin
-        dias = (fin - inicio).days + 1 if inicio and fin else None
-
-        estados[actividad.estado_ejecucion].append({
-            "nivel": nivel.nombre,
-            "espacio": espacio.nombre,
-            "actividad": actividad,
-            "asignado": actividad.asignado,
-            "dias": dias,
-        })
-
-    context = {
-        "proyecto": proyecto,
-        "estados": estados,
-        "ESTADO_EJECUCION_CHOICES": ESTADO_EJECUCION_CHOICES,
-        "vista": vista,
-        "hoy": date.today(),
-        # REEMPLAZA LA LÍNEA COMPLETA POR ESTA:
-        "asignados": Actividad.objects.filter(
-            espacio__nivel__proyecto=proyecto,
-            asignado__isnull=False
-        ).values_list("asignado__id", "asignado__username").distinct(),
-        # Para mostrar los filtros seleccionados
-        "filtros": {
-            "nombre": nombre,
-            "asignado": asignado_id,
-            "estado_ejecucion": estado_ejecucion,
-            "estado_asignacion": estado_asignacion,
-            "habilitada": habilitada,
-            "fecha_inicio": fecha_inicio,
-            "fecha_fin": fecha_fin,
-            "avance_min": avance_min,
-            "avance_max": avance_max,
-        },
-    }
-
-    return render(request, "construccion1app/programacion.html", context)
+    
     
 
 
-    from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404
 from django.http import HttpResponse
 from openpyxl import Workbook
