@@ -1,0 +1,57 @@
+@startuml Diagrama de Casos de Uso - SuperAdminEmpresa
+
+top to bottom direction
+
+actor "SuperAdminEmpresa" as SAE
+
+rectangle "Sistema de Gestión de Construcción" {
+    usecase "Crear Proyecto" as UC1
+    usecase "Editar Proyecto" as UC2
+    usecase "Eliminar Proyecto" as UC3
+    usecase "Ver Dashboard de Proyecto" as UC4
+    usecase "Crear Nivel" as UC5
+    usecase "Editar Nivel" as UC6
+    usecase "Eliminar Nivel" as UC7
+    usecase "Crear Espacio" as UC8
+    usecase "Editar Espacio" as UC9
+    usecase "Eliminar Espacio" as UC10
+    usecase "Crear Actividad" as UC11
+    usecase "Modificar Actividad" as UC12
+    usecase "Eliminar Actividad" as UC13
+    usecase "Importar Actividades" as UC14
+    usecase "Exportar Actividades" as UC15
+    usecase "Ver Programación (Kanban/Gantt)" as UC16
+    usecase "Ver Mapa de Actividades" as UC17
+    usecase "Crear Usuario" as UC18
+    usecase "Editar Usuario" as UC19
+    usecase "Eliminar Usuario" as UC20
+    usecase "Asignar Rol a Usuario" as UC21
+    usecase "Ver Notificaciones" as UC22
+    usecase "Gestionar Notificaciones" as UC23
+}
+
+SAE --> UC1
+SAE --> UC2
+SAE --> UC3
+SAE --> UC4
+SAE --> UC5
+SAE --> UC6
+SAE --> UC7
+SAE --> UC8
+SAE --> UC9
+SAE --> UC10
+SAE --> UC11
+SAE --> UC12
+SAE --> UC13
+SAE --> UC14
+SAE --> UC15
+SAE --> UC16
+SAE --> UC17
+SAE --> UC18
+SAE --> UC19
+SAE --> UC20
+SAE --> UC21
+SAE --> UC22
+SAE --> UC23
+
+@enduml

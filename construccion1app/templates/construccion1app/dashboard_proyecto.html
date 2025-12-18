@@ -414,17 +414,13 @@
                                                         {% load cloudinary %}
                                                         
                                                         <!-- Botón que maneja desktop y móvil -->
-                                                        <a href="#" 
-                                                           class="btn btn-primary btn-sm pdf-link" 
-                                                           data-pdf-url="{{ a.archivo_informacion.url }}"
-                                                           data-bs-toggle="modal" 
-                                                           data-bs-target="#pdfModal-{{ nivel.id }}-{{ e.id }}-{{ forloop.counter }}">
+                                                        <a href="#" class="btn btn-primary btn-sm" onclick="handlePDFClick('{{ a.archivo_informacion.url }}', '{{ forloop.counter }}')">
                                                             <i class="fas fa-file-pdf"></i> Ver PDF
                                                         </a>
                                                         
                                                         <!-- Modal SOLO para desktop -->
                                                         <div class="modal fade pdf-modal" 
-                                                             id="pdfModal-{{ nivel.id }}-{{ e.id }}-{{ forloop.counter }}" 
+                                                             id="pdfModal{{ forloop.counter }}" 
                                                              tabindex="-1" 
                                                              aria-hidden="true"
                                                              data-pdf-url="{{ a.archivo_informacion.url }}">
@@ -825,6 +821,23 @@ document.addEventListener("DOMContentLoaded", function() {
     })();
     {% endfor %}
 });
+
+// Función para detectar iOS
+function isIOS() {
+    return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+}
+
+// Función para manejar clic en botón PDF
+function handlePDFClick(url, counter) {
+    if (isIOS()) {
+        // En iOS, redirigir inmediatamente al link para descargar
+        window.location.href = url;
+    } else {
+        // En otros dispositivos, abrir modal
+        var modal = new bootstrap.Modal(document.getElementById('pdfModal' + counter));
+        modal.show();
+    }
+}
 </script>
 
 {% endblock %}
