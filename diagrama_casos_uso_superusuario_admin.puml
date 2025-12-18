@@ -1,5 +1,7 @@
 @startuml Diagrama de Casos de Uso - Panel de Superusuario (Admin)
 
+top to bottom direction
+
 actor "Superusuario" as SU
 
 rectangle "Panel de Administración de Django" {
