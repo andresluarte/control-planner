@@ -438,6 +438,29 @@ document.addEventListener("DOMContentLoaded", function () {
 
         // Reemplazar el input original por el select
         avanceField.parentNode.replaceChild(select, avanceField);
+
+        // Agregar funcionalidad para cambiar estado según avance
+        const estadoEjecucionSelect = document.querySelector('#id_estado_ejecucion');
+        if (estadoEjecucionSelect) {
+            select.addEventListener('change', function() {
+                const avanceSeleccionado = parseInt(this.value);
+                if (avanceSeleccionado === 100) {
+                    estadoEjecucionSelect.value = 'ejecutada';
+                    // Agregar animación de cambio
+                    estadoEjecucionSelect.classList.add('estado-changed');
+                    setTimeout(() => {
+                        estadoEjecucionSelect.classList.remove('estado-changed');
+                    }, 600);
+                } else if (avanceSeleccionado === 0) {
+                    estadoEjecucionSelect.value = 'ejecucion';
+                    // Agregar animación de cambio
+                    estadoEjecucionSelect.classList.add('estado-changed');
+                    setTimeout(() => {
+                        estadoEjecucionSelect.classList.remove('estado-changed');
+                    }, 600);
+                }
+            });
+        }
     }
 });
 </script>

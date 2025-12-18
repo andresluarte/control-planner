@@ -1,0 +1,42 @@
+@startuml Diagrama de Actividades - Dashboard Proyecto con Permisos
+
+start
+
+:Usuario solicita dashboard_proyecto.html;
+
+:Verificar tipo de usuario;
+
+if (¿Es superuser?) then (Sí)
+    :Mostrar botón eliminar proyecto;
+    :Mostrar formulario agregar nivel;
+    :Para cada nivel: Mostrar badges incidencia/ponderado, botón eliminar nivel, botón agregar espacio;
+    :Para cada espacio: Mostrar botón eliminar espacio, badge incidencia, botones agregar actividad/importar/descargar/mapa;
+    :Para tabla actividades: Mostrar columnas incidencia/ponderado, botones modificar/eliminar para todas;
+elseif (¿Es superadmin_empresa?) then (Sí)
+    :Mostrar botón eliminar proyecto;
+    :Mostrar formulario agregar nivel;
+    :Para cada nivel: Mostrar badges incidencia/ponderado, botón eliminar nivel, botón agregar espacio;
+    :Para cada espacio: Mostrar botón eliminar espacio, badge incidencia, botones agregar actividad/importar/descargar/mapa;
+    :Para tabla actividades: Mostrar columnas incidencia/ponderado, botones modificar/eliminar para todas;
+elseif (¿Es admin_empresa?) then (Sí)
+    :Mostrar formulario agregar nivel;
+    :Para cada nivel: Mostrar botón agregar espacio;
+    :Para cada espacio: Mostrar botones agregar actividad/importar/descargar/mapa;
+    :Para tabla actividades: Mostrar columnas incidencia/ponderado, botones modificar/eliminar;
+elseif (¿Es calidad?) then (Sí)
+    :Para tabla actividades: Mostrar botones modificar (solo si asignado o calidad);
+elseif (¿Es supervisor_constructor?) then (Sí)
+    :No mostrar elementos de administración;
+    :Para tabla actividades: Mostrar solo lectura;
+else (Otro usuario)
+    :No mostrar elementos de administración;
+    :Para tabla actividades: Mostrar botones modificar solo si asignado;
+endif
+
+:Mostrar elementos comunes: Gráfico principal, lista de niveles/espacios/actividades, mapas, etc.;
+
+:Renderizar template completo;
+
+stop
+
+@enduml

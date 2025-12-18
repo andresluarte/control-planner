@@ -1,0 +1,75 @@
+@startuml Diagrama de Casos de Uso - AdminEmpresa
+
+left to right direction
+
+actor "AdminEmpresa" as AE
+
+rectangle "Sistema de Gestión de Construcción" {
+    usecase "Iniciar Sesión" as UC1
+    usecase "Cerrar Sesión" as UC2
+    usecase "Ver Mi Perfil" as UC3
+    usecase "Ver Mis Proyectos" as UC5
+    usecase "Editar Visibilidad de Proyecto" as UC6
+    usecase "Agregar Usuario" as UC7
+    usecase "Ver Lista de Usuarios de Empresa" as UC8
+    usecase "Agregar Proyecto" as UC9
+    usecase "Eliminar Proyecto" as UC10
+    usecase "Ver Dashboard de Proyecto" as UC11
+    usecase "Agregar Nivel" as UC12
+    usecase "Eliminar Nivel" as UC13
+    usecase "Agregar Espacio" as UC14
+    usecase "Eliminar Espacio" as UC15
+    usecase "Agregar Actividad" as UC16
+    usecase "Modificar Actividad" as UC17
+    usecase "Eliminar Actividad" as UC18
+    usecase "Ver Mapa de Actividades" as UC19
+    usecase "Importar Actividades" as UC20
+    usecase "Descargar Plantilla de Actividades" as UC21
+    usecase "Ver Programación de Obra" as UC22
+    usecase "Exportar Actividades a Excel" as UC23
+    usecase "Ver Lista de Notificaciones" as UC24
+    usecase "Ver Detalle de Notificación" as UC25
+    usecase "Marcar Todas las Notificaciones como Leídas" as UC26
+    usecase "Guardar Token FCM" as UC27
+    usecase "Probar Notificación" as UC28
+    usecase "Diagnóstico de Firebase" as UC29
+    usecase "Calcular Incidencia Restante" as UC30
+    usecase "Sumar Incidencias" as UC31
+    usecase "Ver Página Home" as UC32
+    usecase "Renderizar Base" as UC33
+}
+
+AE --> UC1
+AE --> UC2
+AE --> UC3
+AE --> UC5
+AE --> UC6
+AE --> UC7
+AE --> UC8
+AE --> UC9
+AE --> UC10
+AE --> UC11
+AE --> UC12
+AE --> UC13
+AE --> UC14
+AE --> UC15
+AE --> UC16
+AE --> UC17
+AE --> UC18
+AE --> UC19
+AE --> UC20
+AE --> UC21
+AE --> UC22
+AE --> UC23
+AE --> UC24
+AE --> UC25
+AE --> UC26
+AE --> UC27
+AE --> UC28
+AE --> UC29
+AE --> UC30
+AE --> UC31
+AE --> UC32
+AE --> UC33
+
+@enduml

@@ -1,0 +1,51 @@
+@startuml Diagrama de Casos de Uso - Panel de Superusuario (Admin)
+
+actor "Superusuario" as SU
+
+rectangle "Panel de Administración de Django" {
+    usecase "Crear Empresa" as UC1
+    usecase "Editar Empresa" as UC2
+    usecase "Eliminar Empresa" as UC3
+    usecase "Crear Usuario" as UC4
+    usecase "Editar Usuario" as UC5
+    usecase "Eliminar Usuario" as UC6
+    usecase "Asignar Rol a Usuario" as UC7
+    usecase "Asignar Empresa a Usuario" as UC8
+    usecase "Ver Proyectos" as UC9
+    usecase "Editar Proyecto" as UC10
+    usecase "Eliminar Proyecto" as UC11
+    usecase "Ver Niveles" as UC12
+    usecase "Editar Nivel" as UC13
+    usecase "Eliminar Nivel" as UC14
+    usecase "Ver Espacios" as UC15
+    usecase "Editar Espacio" as UC16
+    usecase "Eliminar Espacio" as UC17
+    usecase "Ver Actividades" as UC18
+    usecase "Editar Actividad" as UC19
+    usecase "Eliminar Actividad" as UC20
+    usecase "Gestionar Notificaciones" as UC21
+}
+
+SU --> UC1
+SU --> UC2
+SU --> UC3
+SU --> UC4
+SU --> UC5
+SU --> UC6
+SU --> UC7
+SU --> UC8
+SU --> UC9
+SU --> UC10
+SU --> UC11
+SU --> UC12
+SU --> UC13
+SU --> UC14
+SU --> UC15
+SU --> UC16
+SU --> UC17
+SU --> UC18
+SU --> UC19
+SU --> UC20
+SU --> UC21
+
+@enduml

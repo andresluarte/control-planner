@@ -8,6 +8,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import csrf_exempt
 from .forms import AgregarUsuarioForm,LoginForm
+from django.core.exceptions import PermissionDenied
 
 from django.http import JsonResponse, HttpResponse
 import json
@@ -197,14 +198,17 @@ def dashboard_proyecto(request, proyecto_id):
 
     # Manejo del formulario
     if mostrar_formulario and request.method == "POST":
-        form = NivelForm(request.POST)
+        form = NivelForm(request.POST, proyecto=proyecto)
         if form.is_valid():
             nivel = form.save(commit=False)
             nivel.proyecto = proyecto
             nivel.save()
-            form = NivelForm()  # limpiar formulario después de guardar
+            messages.success(request, "Nivel creado exitosamente.")
+            form = NivelForm(proyecto=proyecto)  # limpiar formulario después de guardar
+        else:
+            messages.error(request, "Error al crear el nivel. Verifica los datos.")
     else:
-        form = NivelForm() if mostrar_formulario else None
+        form = NivelForm(proyecto=proyecto) if mostrar_formulario else None
 
     # Construcción de datos de niveles y espacios
     datos_niveles = []
@@ -343,7 +347,7 @@ def agregar_nivel(request, proyecto_id):
         raise PermissionDenied("No tienes permiso para crear niveles.")
 
     if request.method == "POST":
-        form = NivelForm(request.POST)
+        form = NivelForm(request.POST, proyecto=proyecto)
         if form.is_valid():
             nivel = form.save(commit=False)
             nivel.proyecto = proyecto  # <-- asignar al proyecto correcto
@@ -353,7 +357,7 @@ def agregar_nivel(request, proyecto_id):
             # Si el formulario no es válido, volver a renderizar la plantilla con errores
             return render(request, "construccion1app/dashboard_proyecto.html", {"form": form, "proyecto": proyecto})
     else:
-        form = NivelForm()
+        form = NivelForm(proyecto=proyecto)
         return render(request, "construccion1app/dashboard_proyecto.html", {"form": form, "proyecto": proyecto})
     
 
@@ -904,6 +908,10 @@ from .models import Proyecto, Actividad
 @login_required
 def programacion_obra(request, proyecto_id):
     proyecto = get_object_or_404(Proyecto, id=proyecto_id)
+
+    # Validar tipo de usuario
+    if request.user.tipo_usuario not in ["superadmin_empresa", "admin_empresa"]:
+        raise PermissionDenied("No tienes permiso para acceder a la programación de obra.")
 
     vista = request.GET.get("vista", "kanban")
 

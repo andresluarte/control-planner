@@ -1,0 +1,83 @@
+@startuml Diagrama de Clases - Dashboard Proyecto
+
+class Proyecto {
+    +id: int
+    +nombre: string
+    +rubro: string
+    +ubicacion: string
+    +descripcion: string
+    +fecha_inicio: date
+    +fecha_fin: date
+    +empresa: Empresa
+    +usuarios_acceso: Usuario[]
+    +calcular_avance(): float
+    +niveles: Nivel[]
+}
+
+class Nivel {
+    +id: int
+    +nombre: string
+    +incidencia: decimal
+    +proyecto: Proyecto
+    +calcular_avance_ponderado(): float
+    +espacios: Espacio[]
+}
+
+class Espacio {
+    +id: int
+    +nombre: string
+    +incidencia: decimal
+    +nivel: Nivel
+    +calcular_avance_ponderado(): float
+    +actividades: Actividad[]
+}
+
+class Actividad {
+    +id: int
+    +nombre: string
+    +avance: decimal
+    +incidencia: decimal
+    +estado_ejecucion: string
+    +estado_asignacion: string
+    +justificacion: string
+    +asignado: Usuario
+    +predecesora: Actividad
+    +sucesora: Actividad
+    +habilitada: boolean
+    +fecha_inicio: date
+    +fecha_fin: date
+    +espacio: Espacio
+    +archivo_justificacion: File
+    +archivo_informacion: File
+    +aprobacion_calidad: boolean
+    +calcular_avance_ponderado(): float
+}
+
+class Usuario {
+    +id: int
+    +username: string
+    +first_name: string
+    +last_name: string
+    +email: string
+    +tipo_usuario: string
+    +empresa: Empresa
+    +fcm_token: string
+    +notificaciones: Notificacion[]
+}
+
+class Empresa {
+    +id: int
+    +nombre: string
+    +usuarios: Usuario[]
+}
+
+Proyecto ||--o{ Nivel : tiene
+Nivel ||--o{ Espacio : tiene
+Espacio ||--o{ Actividad : tiene
+Actividad o--o Usuario : asignado
+Actividad o--o Actividad : predecesora
+Actividad o--o Actividad : sucesora
+Usuario }o--|| Empresa : pertenece
+Proyecto }o--o{ Usuario : acceso
+
+@enduml

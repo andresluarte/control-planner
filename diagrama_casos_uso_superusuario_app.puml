@@ -1,0 +1,39 @@
+@startuml Diagrama de Casos de Uso - Superusuario en la App
+
+actor "Superusuario" as SU
+
+rectangle "Sistema de Gestión de Construcción" {
+    usecase "Ver Mis Proyectos" as UC1
+    usecase "Filtrar Proyectos por Empresa" as UC2
+    usecase "Ver Dashboard de Proyecto" as UC3
+    usecase "Crear Nivel" as UC4
+    usecase "Eliminar Nivel" as UC5
+    usecase "Crear Espacio" as UC6
+    usecase "Eliminar Espacio" as UC7
+    usecase "Crear Actividad" as UC8
+    usecase "Modificar Actividad" as UC9
+    usecase "Eliminar Actividad" as UC10
+    usecase "Eliminar Proyecto" as UC11
+    usecase "Ver Programación (Kanban/Gantt)" as UC12
+    usecase "Ver Mapa de Actividades" as UC13
+    usecase "Ver Notificaciones" as UC14
+    usecase "Exportar Actividades" as UC15
+}
+
+SU --> UC1
+SU --> UC2
+SU --> UC3
+SU --> UC4
+SU --> UC5
+SU --> UC6
+SU --> UC7
+SU --> UC8
+SU --> UC9
+SU --> UC10
+SU --> UC11
+SU --> UC12
+SU --> UC13
+SU --> UC14
+SU --> UC15
+
+@enduml

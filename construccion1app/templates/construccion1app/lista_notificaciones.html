@@ -9,7 +9,10 @@
             {% if notificaciones %}
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <p class="text-muted mb-0">
-                    Mostrando {{ notificaciones|length }} notificaciones
+                    Mostrando {{ notificaciones|length }} de {{ notificaciones.paginator.count }} notificaciones
+                    {% if notificaciones.paginator.num_pages > 1 %}
+                        (Página {{ notificaciones.number }} de {{ notificaciones.paginator.num_pages }})
+                    {% endif %}
                 </p>
                 <a href="{% url 'marcar_todas_leidas' %}" class="btn btn-sm btn-outline-secondary">
                     <i class="bi bi-check2-all"></i> Marcar todas como leídas
@@ -51,37 +54,45 @@
         <!-- Paginación -->
         {% if notificaciones.has_other_pages %}
         <nav aria-label="Paginación de notificaciones" class="mt-4">
-            <ul class="pagination justify-content-center">
-                {% if notificaciones.has_previous %}
-                <li class="page-item">
-                    <a class="page-link" href="?page=1">Primera</a>
-                </li>
-                <li class="page-item">
-                    <a class="page-link" href="?page={{ notificaciones.previous_page_number }}">Anterior</a>
-                </li>
-                {% endif %}
-
-                {% for num in notificaciones.paginator.page_range %}
-                    {% if notificaciones.number == num %}
-                    <li class="page-item active">
-                        <span class="page-link">{{ num }}</span>
+            <div class="d-flex justify-content-center">
+                <ul class="pagination pagination-sm flex-wrap justify-content-center">
+                    {% if notificaciones.has_previous %}
+                    <li class="page-item d-none d-sm-inline">
+                        <a class="page-link" href="?page=1">Primera</a>
                     </li>
-                    {% elif num > notificaciones.number|add:'-3' and num < notificaciones.number|add:'3' %}
                     <li class="page-item">
-                        <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                        <a class="page-link" href="?page={{ notificaciones.previous_page_number }}">
+                            <span class="d-inline d-sm-none">‹</span>
+                            <span class="d-none d-sm-inline">Anterior</span>
+                        </a>
                     </li>
                     {% endif %}
-                {% endfor %}
 
-                {% if notificaciones.has_next %}
-                <li class="page-item">
-                    <a class="page-link" href="?page={{ notificaciones.next_page_number }}">Siguiente</a>
-                </li>
-                <li class="page-item">
-                    <a class="page-link" href="?page={{ notificaciones.paginator.num_pages }}">Última</a>
-                </li>
-                {% endif %}
-            </ul>
+                    {% for num in notificaciones.paginator.page_range %}
+                        {% if notificaciones.number == num %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ num }}</span>
+                        </li>
+                        {% elif num > notificaciones.number|add:'-2' and num < notificaciones.number|add:'2' %}
+                        <li class="page-item d-none d-md-inline">
+                            <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                        </li>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if notificaciones.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ notificaciones.next_page_number }}">
+                            <span class="d-inline d-sm-none">›</span>
+                            <span class="d-none d-sm-inline">Siguiente</span>
+                        </a>
+                    </li>
+                    <li class="page-item d-none d-sm-inline">
+                        <a class="page-link" href="?page={{ notificaciones.paginator.num_pages }}">Última</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </div>
         </nav>
         {% endif %}
     {% else %}

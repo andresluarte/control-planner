@@ -106,7 +106,7 @@ class NivelForm(forms.ModelForm):
             if self.instance.pk:
                 qs = qs.exclude(pk=self.instance.pk)
 
-            suma_existente = qs.aggregate(total=forms.models.Sum("incidencia"))["total"] or 0
+            suma_existente = qs.aggregate(total=Sum("incidencia"))["total"] or 0
 
             if suma_existente + incidencia > 100:
                 raise ValidationError(

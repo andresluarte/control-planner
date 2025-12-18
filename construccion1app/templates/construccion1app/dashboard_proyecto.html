@@ -259,12 +259,12 @@
                 <div class="progress-bar bg-success progress-bar-striped nivel-progress-bar-{{ nivel.id }}" 
                     role="progressbar" 
                     data-avance="{{ nivel.avance }}"
-                    aria-valuenow="{{ nivel.avance|floatformat:0 }}" 
+                    aria-valuenow="{{ nivel.avance|floatformat:2 }}" 
                     aria-valuemin="0" 
                     aria-valuemax="100"
                     style="width: 0%;">
                     {% if request.user.is_superuser or request.user.tipo_usuario == 'superadmin_empresa' %}
-                        {{ nivel.avance|floatformat:0 }}%
+                        {{ nivel.avance|floatformat:2 }}%
                     {% endif %}
                 </div>
             </div>
@@ -411,11 +411,29 @@
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
                         </div>
                         <div class="modal-body p-0">
-                            <!-- Usar Google Docs Viewer como fallback -->
-                            <iframe src="https://docs.google.com/viewer?url={{ a.archivo_informacion.url|urlencode }}&embedded=true" 
-                                    style="width: 100%; height: 75vh; border: none;"
-                                    onerror="this.src='{{ a.archivo_informacion.url }}'">
-                            </iframe>
+                            <!-- Contenedor para PDF -->
+                            <div id="pdf-container-{{ forloop.counter }}" class="pdf-container">
+                                <!-- Usar Google Docs Viewer como fallback -->
+                                <iframe src="https://docs.google.com/viewer?url={{ a.archivo_informacion.url|urlencode }}&embedded=true" 
+                                        style="width: 100%; height: 75vh; border: none;"
+                                        onerror="this.src='{{ a.archivo_informacion.url }}'">
+                                </iframe>
+                            </div>
+                            
+                            <!-- Mensaje alternativo para iOS -->
+                            <div id="ios-message-{{ forloop.counter }}" class="d-none text-center p-4" style="background: #f8f9fa; border: 1px solid #dee2e6;">
+                                <i class="fas fa-mobile-alt fa-3x text-primary mb-3"></i>
+                                <h5>Visualización en iPhone</h5>
+                                <p class="mb-3">Para una mejor experiencia, utiliza las opciones de descarga o abrir en nueva pestaña.</p>
+                                <div class="d-flex justify-content-center gap-2">
+                                    <a href="{{ a.archivo_informacion.url }}" target="_blank" class="btn btn-primary">
+                                        <i class="fas fa-external-link-alt me-1"></i>Abrir
+                                    </a>
+                                    <a href="{{ a.archivo_informacion.url }}" download class="btn btn-success">
+                                        <i class="fas fa-download me-1"></i>Descargar
+                                    </a>
+                                </div>
+                            </div>
                         </div>
                         <div class="modal-footer">
                             <a href="{{ a.archivo_informacion.url }}" target="_blank" class="btn btn-secondary" download>
@@ -706,6 +724,44 @@ document.addEventListener("DOMContentLoaded", function () {
     {% endfor %}
 });
 
+// Función para detectar iOS
+function isIOS() {
+    return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+}
+
+// Manejar visualización de PDFs en modales
+document.addEventListener("DOMContentLoaded", function() {
+    // Configurar todos los modales de PDF
+    {% for nivel in niveles %}
+        {% for e in nivel.espacios %}
+            {% for a in e.actividades %}
+                {% if a.archivo_informacion %}
+                (function() {
+                    var modalId = 'pdfModal{{ forloop.counter }}';
+                    var modal = document.getElementById(modalId);
+                    if (modal) {
+                        modal.addEventListener('show.bs.modal', function() {
+                            var container = document.getElementById('pdf-container-{{ forloop.counter }}');
+                            var iosMessage = document.getElementById('ios-message-{{ forloop.counter }}');
+                            
+                            if (isIOS()) {
+                                // En iOS, mostrar mensaje alternativo
+                                if (container) container.style.display = 'none';
+                                if (iosMessage) iosMessage.classList.remove('d-none');
+                            } else {
+                                // En otros dispositivos, mostrar iframe
+                                if (container) container.style.display = 'block';
+                                if (iosMessage) iosMessage.classList.add('d-none');
+                            }
+                        });
+                    }
+                })();
+                {% endif %}
+            {% endfor %}
+        {% endfor %}
+    {% endfor %}
+});
+
 // Corregir barras de progreso de niveles
 document.addEventListener("DOMContentLoaded", function() {
     {% for nivel in niveles %}
@@ -722,5 +778,6 @@ document.addEventListener("DOMContentLoaded", function() {
     {% endfor %}
 });
 </script>
+
 
 {% endblock %}

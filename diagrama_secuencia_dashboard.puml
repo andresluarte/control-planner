@@ -1,0 +1,52 @@
+@startuml Diagrama de Secuencia - Dashboard Proyecto
+
+actor Usuario
+participant "Navegador Web" as Browser
+participant "Vista dashboard_proyecto" as View
+participant "Modelo Proyecto" as Proyecto
+participant "Modelo Nivel" as Nivel
+participant "Modelo Espacio" as Espacio
+participant "Modelo Actividad" as Actividad
+participant "Base de Datos" as DB
+participant "Template dashboard_proyecto.html" as Template
+
+Usuario -> Browser: Solicita URL /dashboard/<proyecto_id>/
+Browser -> View: Llama a dashboard_proyecto(request, proyecto_id)
+
+View -> Proyecto: get_object_or_404(id=proyecto_id)
+Proyecto -> DB: SELECT * FROM proyecto WHERE id=proyecto_id
+DB --> Proyecto: Retorna proyecto
+
+View -> View: Verificar permisos (tipo_usuario)
+
+View -> Nivel: proyecto.niveles.all()
+Nivel -> DB: SELECT * FROM nivel WHERE proyecto_id=proyecto_id
+DB --> Nivel: Retorna niveles
+
+loop Para cada nivel
+    View -> Espacio: nivel.espacios.all()
+    Espacio -> DB: SELECT * FROM espacio WHERE nivel_id=nivel.id
+    DB --> Espacio: Retorna espacios
+
+    loop Para cada espacio
+        View -> Actividad: espacio.actividades.all()
+        Actividad -> DB: SELECT * FROM actividad WHERE espacio_id=espacio.id
+        DB --> Actividad: Retorna actividades
+
+        View -> View: Construir dict de actividades con cálculos
+    end
+
+    View -> View: Construir dict de espacios con avances
+end
+
+View -> View: Construir dict de niveles con avances
+View -> Proyecto: calcular_avance()
+Proyecto -> DB: Consultas para calcular avance total
+DB --> Proyecto: Retorna datos para cálculo
+Proyecto --> View: Retorna avance_total
+
+View -> Template: render(request, 'dashboard_proyecto.html', context)
+Template --> Browser: HTML con datos
+Browser --> Usuario: Muestra dashboard con gráficos y tablas
+
+@enduml
