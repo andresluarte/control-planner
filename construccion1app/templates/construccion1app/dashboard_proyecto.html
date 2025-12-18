@@ -548,6 +548,28 @@
 </div>
 
 <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+<script>
+function isIOS() {
+    return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+}
+
+function handlePDFClick(pdfUrl, counter) {
+    if (isIOS()) {
+        // 📱 iOS → descarga inmediata
+        const link = document.createElement('a');
+        link.href = pdfUrl;
+        link.download = '';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    } else {
+        // 💻 Web / Android → abrir modal
+        const modalId = `#pdfModal${counter}`;
+        const modal = new bootstrap.Modal(document.querySelector(modalId));
+        modal.show();
+    }
+}
+</script>
 
 <script>
 // Toggle para botones "Ver Espacios"
