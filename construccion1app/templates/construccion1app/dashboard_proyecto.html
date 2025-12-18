@@ -395,8 +395,8 @@
         {% if a.archivo_informacion %}
             {% load cloudinary %}
             
-            <!-- Botón que abre el modal -->
-            <a href="#" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#pdfModal{{ forloop.counter }}">
+            <!-- Botón que abre el modal o descarga en iOS -->
+            <a href="#" class="btn btn-primary btn-sm" onclick="handlePDFClick('{{ a.archivo_informacion.url }}', '{{ forloop.counter }}')">
                 <i class="fas fa-file-pdf"></i> Ver PDF
             </a>
             
@@ -727,6 +727,21 @@ document.addEventListener("DOMContentLoaded", function () {
 // Función para detectar iOS
 function isIOS() {
     return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+}
+
+// Función para manejar clic en botón PDF
+function handlePDFClick(url, counter) {
+    if (isIOS()) {
+        // En iOS, intentar descargar directamente
+        var link = document.createElement('a');
+        link.href = url;
+        link.download = 'documento.pdf'; // Nombre genérico, se puede mejorar
+        link.click();
+    } else {
+        // En otros dispositivos, abrir modal
+        var modal = new bootstrap.Modal(document.getElementById('pdfModal' + counter));
+        modal.show();
+    }
 }
 
 // Manejar visualización de PDFs en modales
