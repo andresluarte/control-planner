@@ -1,6 +1,6 @@
 {
   "name": "Control Planner",
-  "short_name": "ConstruApp",
+  "short_name": "Control-Planner",
   "description": "Sistema de gestión de construcción",
   "start_url": "/",
   "scope": "/",

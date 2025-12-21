@@ -574,7 +574,7 @@ def eliminar_actividad(request, pk):
     if not (
         request.user.is_superuser
         or request.user.tipo_usuario in ["superadmin_empresa", "admin_empresa"]
-        or actividad.asignado == request.user
+       
     ):
         return HttpResponseForbidden("No tienes permisos para eliminar esta actividad.")
 

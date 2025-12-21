@@ -1,0 +1,49 @@
+@startuml Diagrama de Casos de Uso - AdminEmpresa
+
+top to bottom direction
+
+skinparam usecaseDirection top to bottom
+
+actor "AdminEmpresa" as AE
+
+rectangle "Sistema de Gestión de Construcción" {
+    usecase "Crear Proyecto" as UC1
+    usecase "Editar Proyecto" as UC2
+    usecase "Ver Dashboard de Proyecto" as UC3
+    usecase "Crear Nivel" as UC4
+    usecase "Editar Nivel" as UC5
+    usecase "Crear Espacio" as UC6
+    usecase "Editar Espacio" as UC7
+    usecase "Crear Actividad" as UC8
+    usecase "Modificar Actividad" as UC9
+    usecase "Importar Actividades" as UC10
+    usecase "Exportar Actividades" as UC11
+    usecase "Ver Programación (Kanban/Gantt)" as UC12
+    usecase "Ver Mapa de Actividades" as UC13
+    usecase "Crear Usuario (Supervisores/Calidad)" as UC14
+    usecase "Editar Usuario" as UC15
+    usecase "Eliminar Usuario" as UC16
+    usecase "Asignar Rol a Usuario" as UC17
+    usecase "Ver Notificaciones" as UC18
+}
+
+AE --> UC1
+AE --> UC2
+AE --> UC3
+AE --> UC4
+AE --> UC5
+AE --> UC6
+AE --> UC7
+AE --> UC8
+AE --> UC9
+AE --> UC10
+AE --> UC11
+AE --> UC12
+AE --> UC13
+AE --> UC14
+AE --> UC15
+AE --> UC16
+AE --> UC17
+AE --> UC18
+
+@enduml
