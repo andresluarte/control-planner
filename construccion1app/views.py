@@ -910,7 +910,7 @@ def programacion_obra(request, proyecto_id):
     proyecto = get_object_or_404(Proyecto, id=proyecto_id)
 
     # Validar tipo de usuario
-    if request.user.tipo_usuario not in ["superadmin_empresa", "admin_empresa"]:
+    if request.user.tipo_usuario not in ["superadmin_empresa", "admin_empresa","calidad","supervisor_constructor","superuser"]:
         raise PermissionDenied("No tienes permiso para acceder a la programación de obra.")
 
     vista = request.GET.get("vista", "kanban")
