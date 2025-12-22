@@ -231,7 +231,8 @@ def dashboard_proyecto(request, proyecto_id):
                     "fecha_fin": a.fecha_fin,
                     "estado_asignacion": a.estado_asignacion,
                     "archivo_informacion": a.archivo_informacion,  # <-- aquí
-                    "justificacion": a.justificacion,  # <-- aquí
+                    "justificacion": a.justificacion,  # <-- aquí,
+                    "estado_ejecucion": a.estado_ejecucion,  # para comparaciones
 
                     
                 }

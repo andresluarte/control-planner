@@ -22,6 +22,15 @@
                     </div>
                 {% endfor %}
             {% endif %}
+            <!-- Alerta si está revisada -->
+            {% if form.mensaje_revisada %}
+            <div class="alert alert-warning shadow-sm" role="alert">
+                <i class="fas fa-lock me-2"></i>
+                <strong>{{ form.mensaje_revisada }}</strong>
+                <br>
+                <small>Todos los campos están deshabilitados y no se pueden modificar.</small>
+            </div>
+            {% endif %}
             <div class="mb-3">
                 <a href="{% url 'dashboard_proyecto' espacio.nivel.proyecto.id %}" class="btn btn-light shadow-sm" style="border: 2px solid #e0e0e0; font-weight: 500;">
                     <i class="fas fa-arrow-left me-2"></i>Volver al Dashboard
@@ -464,6 +473,144 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 });
 </script>
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    // Verificar si la actividad está revisada
+    const estadoEjecucionSelect = document.querySelector("#id_estado_ejecucion");
+    const estaRevisada = estadoEjecucionSelect && estadoEjecucionSelect.value === 'revisada';
+    
+    // O verificar si algún campo tiene el atributo data-revisada
+    const campoConAtributo = document.querySelector('[data-revisada="true"]');
+    const actividadRevisada = estaRevisada || campoConAtributo;
+    
+    if (actividadRevisada) {
+        console.log("Actividad revisada detectada - bloqueando todos los campos");
+        
+        // 1. Bloquear campos de fecha
+        const fechaInicio = document.querySelector("#id_fecha_inicio");
+        const fechaFin = document.querySelector("#id_fecha_fin");
+        
+        if (fechaInicio) {
+            fechaInicio.disabled = true;
+            fechaInicio.classList.add('bg-light');
+            fechaInicio.style.cursor = 'not-allowed';
+        }
+        
+        if (fechaFin) {
+            fechaFin.disabled = true;
+            fechaFin.classList.add('bg-light');
+            fechaFin.style.cursor = 'not-allowed';
+        }
+        
+        // 2. Bloquear el select de avance (creado dinámicamente)
+        // Esperar a que el script de avance cree el select
+        setTimeout(function() {
+            const avanceSelect = document.querySelector('select[name="avance"]');
+            if (avanceSelect) {
+                avanceSelect.disabled = true;
+                avanceSelect.classList.add('bg-light');
+                avanceSelect.style.cursor = 'not-allowed';
+            }
+        }, 100);
+        
+        // 3. Bloquear TODOS los inputs, selects y textareas
+        document.querySelectorAll('input, select, textarea').forEach(function(element) {
+            element.disabled = true;
+            element.classList.add('bg-light');
+            element.style.cursor = 'not-allowed';
+        });
+        
+        // 4. Ocultar el botón de submit
+        const submitBtn = document.querySelector('button[type="submit"]');
+        if (submitBtn) {
+            submitBtn.style.display = 'none';
+        }
+        
+        // 5. Deshabilitar todos los event listeners
+        const form = document.getElementById('actividadForm');
+        if (form) {
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                alert('Esta actividad está revisada y no puede ser modificada.');
+                return false;
+            });
+        }
+        
+        // 6. Bloquear el botón "Ver Mapa" no es necesario, pero puedes dejarlo
+        // const verMapaBtn = document.getElementById('verMapa');
+        // if (verMapaBtn) {
+        //     verMapaBtn.disabled = false; // Permitir ver el mapa
+        // }
+    }
+});
+</script>
 
+<script>
+// Modificar el script del avance para respetar el estado revisada
+document.addEventListener("DOMContentLoaded", function () {
+    const avanceField = document.querySelector('input[name="avance"]');
+    if (avanceField) {
+        // Verificar si está revisada antes de crear el select
+        const estaRevisada = avanceField.hasAttribute('data-revisada') || 
+                            avanceField.disabled ||
+                            document.querySelector('#id_estado_ejecucion')?.value === 'revisada';
+        
+        // Crear un nuevo <select>
+        const select = document.createElement("select");
+        select.name = avanceField.name;
+        select.id = avanceField.id;
+        select.className = avanceField.className || "form-select";
+
+        // Si está revisada, deshabilitar desde el principio
+        if (estaRevisada) {
+            select.disabled = true;
+            select.classList.add('bg-light');
+            select.style.cursor = 'not-allowed';
+        }
+
+        // Crear las opciones 0% y 100%
+        const opciones = [
+            { valor: 0, texto: "0%" },
+            { valor: 100, texto: "100%" }
+        ];
+
+        opciones.forEach(opt => {
+            const option = document.createElement("option");
+            option.value = opt.valor;
+            option.textContent = opt.texto;
+            if (parseFloat(avanceField.value) === opt.valor) {
+                option.selected = true;
+            }
+            select.appendChild(option);
+        });
+
+        // Reemplazar el input original por el select
+        avanceField.parentNode.replaceChild(select, avanceField);
+
+        // Solo agregar el event listener si NO está revisada
+        if (!estaRevisada) {
+            const estadoEjecucionSelect = document.querySelector('#id_estado_ejecucion');
+            if (estadoEjecucionSelect) {
+                select.addEventListener('change', function() {
+                    const avanceSeleccionado = parseInt(this.value);
+                    if (avanceSeleccionado === 100) {
+                        estadoEjecucionSelect.value = 'ejecutada';
+                        estadoEjecucionSelect.classList.add('estado-changed');
+                        setTimeout(() => {
+                            estadoEjecucionSelect.classList.remove('estado-changed');
+                        }, 600);
+                    } else if (avanceSeleccionado === 0) {
+                        estadoEjecucionSelect.value = 'ejecucion';
+                        estadoEjecucionSelect.classList.add('estado-changed');
+                        setTimeout(() => {
+                            estadoEjecucionSelect.classList.remove('estado-changed');
+                        }, 600);
+                    }
+                });
+            }
+        }
+    }
+});
+</script>
 
 {% endblock %}

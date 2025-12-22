@@ -330,19 +330,25 @@ class ModificarActividadForm(forms.ModelForm):
         # 🔒 BLOQUEO TOTAL SI ESTÁ REVISADA
         # ========================================
         if self.instance and self.instance.pk and self.instance.estado_ejecucion == 'revisada':
-            # Deshabilitar TODOS los campos excepto espacio (que ya está deshabilitado)
+            # Deshabilitar TODOS los campos
             for field_name, field in self.fields.items():
                 field.disabled = True
                 # Agregar clase visual para indicar que está bloqueado
                 if hasattr(field.widget, 'attrs'):
                     field.widget.attrs['readonly'] = True
                     field.widget.attrs['class'] = field.widget.attrs.get('class', '') + ' bg-light'
+                    field.widget.attrs['data-revisada'] = 'true'  # ← AÑADIR ESTE ATRIBUTO
             
-            # Mensaje informativo (puedes accederlo en el template con form.mensaje_revisada)
+            # Mensaje informativo
             self.mensaje_revisada = "Esta actividad está revisada y no puede ser modificada."
+            self.esta_revisada = True  # ← AÑADIR ESTE ATRIBUTO
             
-            # Salir temprano, no aplicar otras restricciones
+            # Salir temprano
             return
+        else:
+            self.esta_revisada = False  # ← AÑADIR ESTE ATRIBUTO
+        
+    # ... resto del código ...
                    
         # ✅ Habilitar sucesora si la actividad está ejecutada         
         if self.instance.estado_ejecucion == 'ejecutada':             
