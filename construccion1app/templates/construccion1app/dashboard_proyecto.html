@@ -471,17 +471,19 @@
                                                     <td><span class="badge bg-warning text-dark rounded-pill">{{ a.ponderado|floatformat:2 }}%</span></td>
                                                 {% endif %}
                                                 <td>
-                                                    {% if request.user.is_superuser or request.user.tipo_usuario in 'superadmin_empresa admin_empresa calidad' or a.asignado == request.user %}
-                                                        <a href="{% url 'modificar_actividad' a.id %}" class="btn btn-outline-primary btn-sm">
-                                                            <i class="bi bi-pencil-square"></i>
-                                                        </a>
-                                                        {% if request.user.is_superuser or request.user.tipo_usuario == 'superadmin_empresa' %}
-                                                            <form action="{% url 'eliminar_actividad' a.id %}" method="post" class="d-inline" onsubmit="return confirm('¿Estás seguro?');">
-                                                                {% csrf_token %}
-                                                                <button type="submit" class="btn btn-outline-danger btn-sm">
-                                                                    <i class="bi bi-trash"></i>
-                                                                </button>
-                                                            </form>
+                                                    {% if a.estado_ejecucion != 'revisada' %}
+                                                        {% if request.user.is_superuser or request.user.tipo_usuario in 'superadmin_empresa admin_empresa calidad' or a.asignado == request.user %}
+                                                            <a href="{% url 'modificar_actividad' a.id %}" class="btn btn-outline-primary btn-sm">
+                                                                <i class="bi bi-pencil-square"></i>
+                                                            </a>
+                                                            {% if request.user.is_superuser or request.user.tipo_usuario == 'superadmin_empresa' %}
+                                                                <form action="{% url 'eliminar_actividad' a.id %}" method="post" class="d-inline" onsubmit="return confirm('¿Estás seguro?');">
+                                                                    {% csrf_token %}
+                                                                    <button type="submit" class="btn btn-outline-danger btn-sm">
+                                                                        <i class="bi bi-trash"></i>
+                                                                    </button>
+                                                                </form>
+                                                            {% endif %}
                                                         {% endif %}
                                                     {% endif %}
                                                 </td>

@@ -324,8 +324,26 @@ class ModificarActividadForm(forms.ModelForm):
         super().__init__(*args, **kwargs)          
         
         # Espacio como solo lectura         
-        self.fields['espacio'].disabled = True                   
+        self.fields['espacio'].disabled = True
         
+        # ========================================
+        # 🔒 BLOQUEO TOTAL SI ESTÁ REVISADA
+        # ========================================
+        if self.instance and self.instance.pk and self.instance.estado_ejecucion == 'revisada':
+            # Deshabilitar TODOS los campos excepto espacio (que ya está deshabilitado)
+            for field_name, field in self.fields.items():
+                field.disabled = True
+                # Agregar clase visual para indicar que está bloqueado
+                if hasattr(field.widget, 'attrs'):
+                    field.widget.attrs['readonly'] = True
+                    field.widget.attrs['class'] = field.widget.attrs.get('class', '') + ' bg-light'
+            
+            # Mensaje informativo (puedes accederlo en el template con form.mensaje_revisada)
+            self.mensaje_revisada = "Esta actividad está revisada y no puede ser modificada."
+            
+            # Salir temprano, no aplicar otras restricciones
+            return
+                   
         # ✅ Habilitar sucesora si la actividad está ejecutada         
         if self.instance.estado_ejecucion == 'ejecutada':             
             if 'sucesora' in self.fields:                 
@@ -359,7 +377,9 @@ class ModificarActividadForm(forms.ModelForm):
                 for campo in campo_solo_lectura:                     
                     if campo in self.fields:                         
                         self.fields[campo].disabled = True
-            
+            if user.tipo_usuario == 'calidad':
+                if 'avance' in self.fields:
+                    self.fields['avance'].widget.attrs['readonly'] = True
             # ========================================
             # 🔒 RESTRICCIÓN PARA SUPERVISOR_CONSTRUCTOR - ARCHIVOS
             # No puede modificar archivo_justificacion ni archivo_informacion
@@ -429,6 +449,7 @@ class ModificarActividadForm(forms.ModelForm):
                 )                 
                 self.fields['predecesora'].queryset = mismo_espacio                 
                 self.fields['sucesora'].queryset = mismo_espacio
+    
     def clean_archivo_informacion(self):
         archivo = self.cleaned_data.get('archivo_informacion')
         if archivo:
